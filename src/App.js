@@ -1180,7 +1180,7 @@ function App() {
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>Exported SQL Schema</DialogTitle>
+        <DialogTitle>Exported Database Schema</DialogTitle>
         <DialogContent sx={{ pt: 2, pb: 0 }}>
           <FormControl fullWidth sx={{ mt: 1, mb: 2 }}>
             <InputLabel id="formatSelectorLabel" sx={{}}>
@@ -1311,7 +1311,7 @@ function App() {
           disablePortal
           keepMounted
         >
-          <MenuItem onClick={openSQLDialog}>Export SQL</MenuItem>
+          <MenuItem onClick={openSQLDialog}>Export as...</MenuItem>
           <MenuItem onClick={() => setImportDialogOpen(true)}>
             Import SQL
           </MenuItem>
