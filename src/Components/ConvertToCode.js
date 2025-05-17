@@ -30,26 +30,23 @@ export const convertToDrizzle = (tables) => {
         default:
           columnType = 'varchar(255)';
       }
-
-      code += `  ${column.name}: ${columnType}()`;
-      
-      // Add constraints
-      const constraints = [];
-      if (column.primaryKey) constraints.push('.primaryKey()');
-      if (!column.nullable) constraints.push('.notNull()');
-      if (column.unique && !column.primaryKey) constraints.push('.unique()');
-      
-      code += `${constraints.join('')},\n`;
-    });
-
-    // Add foreign key references
-    table.columns.forEach(column => {
-      if (column.foreignKey && column.references.tableId && column.references.columnName) {
+    code += `  ${column.name}: ${columnType}()`;
+    
+    // Add constraints
+    const constraints = [];
+    if (column.primaryKey) constraints.push('.primaryKey()');
+    if (!column.nullable) constraints.push('.notNull()');
+    if (column.unique && !column.primaryKey) constraints.push('.unique()');
+    
+    // Add foreign key reference inline with the column definition
+    if (column.foreignKey && column.references.tableId && column.references.columnName) {
         const referencedTable = tables.find(t => t.id === column.references.tableId);
         if (referencedTable) {
-          code += `  // Foreign key reference: ${column.name} -> ${referencedTable.name}.${column.references.columnName}\n`;
+        constraints.push(`.references(() => ${referencedTable.name}.${column.references.columnName})`);
         }
-      }
+    }
+    
+    code += `${constraints.join('')},\n`;
     });
 
     code += '});\n\n';
@@ -74,49 +71,60 @@ export const convertToSpring = (tables) => {
     code += `@Data\n`;
     code += `public class ${capitalizeFirstLetter(table.name)} {\n\n`;
 
+    // Check if table has a primary key
+    const hasPrimaryKey = table.columns.some(col => col.primaryKey);
+    
+    // Add default ID if no primary key exists
+    if (!hasPrimaryKey) {
+      code += '    @Id\n';
+      code += '    @GeneratedValue(strategy = GenerationType.IDENTITY)\n';
+      code += '    private Long id;\n\n';
+    }
+
     // Add fields with annotations
     table.columns.forEach(column => {
-      // Add comments if any
-      if (column.primaryKey) {
-        code += '    @Id\n';
-        code += '    @GeneratedValue(strategy = GenerationType.IDENTITY)\n';
-      }
-
-      if (column.unique && !column.primaryKey) {
-        code += '    @Column(unique = true';
-        code += column.nullable ? ')\n' : ', nullable = false)\n';
-      } else if (!column.nullable && !column.primaryKey) {
-        code += '    @Column(nullable = false)\n';
-      } else if (!column.primaryKey) {
-        code += '    @Column\n';
-      }
-
+      // Check if it's a foreign key
       if (column.foreignKey && column.references.tableId) {
         const referencedTable = tables.find(t => t.id === column.references.tableId);
         if (referencedTable) {
           code += `    @ManyToOne\n`;
           code += `    @JoinColumn(name = "${column.name}", referencedColumnName = "${column.references.columnName}")\n`;
-          code += `    private ${capitalizeFirstLetter(referencedTable.name)} ${toCamelCase(referencedTable.name)};\n\n`;
-          return; // Skip the standard field declaration below
+          code += `    private ${capitalizeFirstLetter(referencedTable.name)} ${toCamelCase(referencedTable.name)}Reference;\n\n`;
         }
-      }
+      } else {
+        // Regular field (not a foreign key)
+        if (column.primaryKey) {
+          code += '    @Id\n';
+          code += '    @GeneratedValue(strategy = GenerationType.IDENTITY)\n';
+        }
 
-      let javaType;
-      switch (column.type.toLowerCase()) {
-        case 'int':
-          javaType = 'Integer';
-          break;
-        case 'varchar':
-          javaType = 'String';
-          break;
-        case 'boolean':
-          javaType = 'Boolean';
-          break;
-        default:
-          javaType = 'String';
-      }
+        if (column.unique && !column.primaryKey) {
+          code += '    @Column(unique = true';
+          code += column.nullable ? ')\n' : ', nullable = false)\n';
+        } else if (!column.nullable && !column.primaryKey) {
+          code += '    @Column(nullable = false)\n';
+        } else if (!column.primaryKey) {
+          code += '    @Column\n';
+        }
 
-      code += `    private ${javaType} ${column.name};\n\n`;
+        let javaType;
+        switch (column.type.toLowerCase()) {
+          case 'int':
+            javaType = 'Integer';
+            break;
+          case 'varchar':
+            javaType = 'String';
+            break;
+          case 'boolean':
+            javaType = 'Boolean';
+            break;
+          default:
+            javaType = 'String';
+        }
+
+        // Use camelCase for field names in Java
+        code += `    private ${javaType} ${column.name};\n\n`;
+      }
     });
 
     // Add notes as comments if they exist
@@ -145,6 +153,31 @@ export const convertToPrisma = (tables) => {
   code += '  url      = env("DATABASE_URL")\n';
   code += '}\n\n';
 
+  const relationMap = new Map();
+
+  // First pass - collect all relations
+  tables.forEach(table => {
+    table.columns.forEach(column => {
+      if (column.foreignKey && column.references.tableId) {
+        const referencedTable = tables.find(t => t.id === column.references.tableId);
+        if (referencedTable) {
+          const relationName = `${table.name}To${capitalizeFirstLetter(referencedTable.name)}`;
+          
+          // Store this relation for the back-reference
+          if (!relationMap.has(referencedTable.id)) {
+            relationMap.set(referencedTable.id, []);
+          }
+          relationMap.get(referencedTable.id).push({
+            fromTable: table,
+            fromColumn: column,
+            relationName: relationName
+          });
+        }
+      }
+    });
+  });
+
+  // Second pass - generate schema
   tables.forEach(table => {
     // Add comments if notes exist
     if (table.notes) {
@@ -153,7 +186,7 @@ export const convertToPrisma = (tables) => {
 
     code += `model ${capitalizeFirstLetter(table.name)} {\n`;
     
-    // Add columns
+    // First add all scalar fields (columns)
     table.columns.forEach(column => {
       let prismaType;
       
@@ -171,23 +204,15 @@ export const convertToPrisma = (tables) => {
           prismaType = 'String';
       }
 
+      // Add basic column type
       code += `  ${column.name} ${prismaType}`;
-
       if(column.nullable) code += '?';
 
-      // Add constraints
+      // Add constraints (but not relations)
       const constraints = [];
       if (column.primaryKey) constraints.push('@id');
       if (column.unique && !column.primaryKey) constraints.push('@unique');
       if (column.primaryKey && column.type.toLowerCase() === 'int') constraints.push('@default(autoincrement())');
-
-      // Add foreign key references
-      if (column.foreignKey && column.references.tableId) {
-        const referencedTable = tables.find(t => t.id === column.references.tableId);
-        if (referencedTable) {
-          constraints.push(`@relation(fields: [${column.name}], references: [${column.references.columnName}])`);
-        }
-      }
 
       if (constraints.length > 0) {
         code += ` ${constraints.join(' ')}`;
@@ -195,16 +220,29 @@ export const convertToPrisma = (tables) => {
 
       code += '\n';
     });
-
-    // Add related models references
+    
+    // Then add relation fields (separate from scalar fields)
     table.columns.forEach(column => {
       if (column.foreignKey && column.references.tableId) {
         const referencedTable = tables.find(t => t.id === column.references.tableId);
         if (referencedTable) {
-          code += `  ${toCamelCase(referencedTable.name)} ${capitalizeFirstLetter(referencedTable.name)}\n`;
+          const relationName = `${table.name}To${capitalizeFirstLetter(referencedTable.name)}`;
+          const refTableName = capitalizeFirstLetter(referencedTable.name);
+          
+          code += `  ${toCamelCase(referencedTable.name)} ${refTableName}? @relation(name: "${relationName}", fields: [${column.name}], references: [${column.references.columnName}])\n`;
         }
       }
     });
+    
+    // Add back-references for relations where THIS table is the target
+    const backReferences = relationMap.get(table.id);
+    if (backReferences && backReferences.length > 0) {
+      backReferences.forEach(ref => {
+        const sourceTableName = capitalizeFirstLetter(ref.fromTable.name);
+        // Use plural form for arrays (one-to-many)
+        code += `  ${toCamelCase(ref.fromTable.name)}s ${sourceTableName}[] @relation(name: "${ref.relationName}")\n`;
+      });
+    }
 
     code += '}\n\n';
   });
