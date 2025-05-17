@@ -21,6 +21,7 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { buttonBaseClasses } from '@mui/material';
 import CanvasStatistics from './Components/CanvasStatistics';
+import { MenuItem } from '@mui/material';
 
 function App() {
   document.body.style.overflow = 'hidden';
@@ -484,13 +485,25 @@ function App() {
               size="small"
               sx={{ flex: 1 }}
             />
-            <TextField
-              label="Data Type"
-              value={tempColumn.type}
-              onChange={handleColumnTypeChange}
-              size="small"
-              sx={{ flex: 1 }}
-            />
+          <div style = {{ flex: 1 , marginTop: '0px'}}>
+           <TextField
+            select
+            label="Data Type"
+            value={tempColumn.type}
+            onChange={handleColumnTypeChange}
+            size="small"
+            fullWidth
+          >
+            <MenuItem value="INTEGER">INTEGER</MenuItem>
+            <MenuItem value="TEXT">TEXT</MenuItem>
+            <MenuItem value="REAL">REAL</MenuItem>
+            <MenuItem value="BOOLEAN">BOOLEAN</MenuItem>
+            <MenuItem value="BOOLEAN">BLOB</MenuItem>
+            <MenuItem value="BOOLEAN">DATE</MenuItem>
+            <MenuItem value="BOOLEAN">TIME</MenuItem>
+            {/* Add more types as needed */}
+          </TextField>
+          </div>
           </div>
           
           <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
