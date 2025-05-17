@@ -13,12 +13,13 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  IconButton
+  IconButton,
 } from "@mui/material";
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import AddIcon from "@mui/icons-material/Add";
 import { MyLocation } from "@mui/icons-material";
 import TrashIcon from "@mui/icons-material/Delete";
+import MenuIcon from "@mui/icons-material/Menu";
 import CanvasStatistics from "./Components/CanvasStatistics";
 import { Add } from "@mui/icons-material";
 import TableDialog from "./Components/TableDialog";
@@ -27,6 +28,9 @@ import {
   convertToPrisma,
   convertToSpring,
 } from "./Components/ConvertToCode";
+import Menu from "@mui/joy/Menu";
+import MenuButton from "@mui/joy/MenuButton";
+import Dropdown from "@mui/joy/Dropdown";
 
 function App() {
   document.body.style.overflow = "hidden";
@@ -254,17 +258,29 @@ function App() {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setImportDialogOpen(false)}>Cancel</Button>
           <Button
-            variant="contained"
+            onClick={() => setImportDialogOpen(false)}
+            sx={{ color: "black", fontWeight: "bold", textTransform: "none" }}
+            variant="text"
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="text"
             color="primary"
             onClick={() => {
               handleTextSubmit();
               setImportDialogOpen(false);
             }}
+            sx={{
+              color: "black",
+              fontWeight: "bold",
+              textTransform: "none",
+              background: "white",
+              "&:hover": { background: "#f0f0f0" },
+            }}
           >
-            {" "}
-            Submit{" "}
+            Submit
           </Button>
         </DialogActions>
       </Dialog>
@@ -534,6 +550,7 @@ function App() {
     const notNullRegex = /NOT\s+NULL/i;
     const fkRegex =
       /FOREIGN\s+KEY\s*\(([^)]+)\)\s*REFERENCES\s+([a-zA-Z0-9_]+)\s*\(([^)]+)\)/i;
+    const tableLevelPKRegex = /^PRIMARY\s+KEY\s*\(([^)]+)\)/i;
 
     let match;
     const tablesArr = [];
@@ -546,8 +563,15 @@ function App() {
         .map((line) => line.trim());
       const columns = [];
       const foreignKeys = [];
+      let primaryKeyName = null;
 
       columnsLines.forEach((line) => {
+        // Handle table-level primary key constraint
+        const tablePKMatch = tableLevelPKRegex.exec(line);
+        if (tablePKMatch) {
+          primaryKeyName = tablePKMatch[1].trim();
+          return;
+        }
         // Handle table-level foreign key constraints
         const fkMatch = fkRegex.exec(line);
         if (fkMatch) {
@@ -560,7 +584,6 @@ function App() {
           });
           return;
         }
-
         // Handle regular column definitions
         const colMatch = columnLineRegex.exec(line);
         if (colMatch) {
@@ -589,12 +612,19 @@ function App() {
         }
       });
 
+      // Attach table-level primary key to the correct column
+      if (primaryKeyName) {
+        const pkCol = columns.find((c) => c.name === primaryKeyName);
+        if (pkCol) pkCol.primaryKey = true;
+      }
+
       tablesArr.push({
         id: `table-${Date.now()}-${Math.random()}`,
         name: tableName,
         notes: "",
         columns,
-        primaryKey: columns.find((c) => c.primaryKey)?.name || null,
+        primaryKey:
+          columns.find((c) => c.primaryKey)?.name || null,
         foreignKeys,
         position: { x: 100, y: 100 },
       });
@@ -726,21 +756,22 @@ function App() {
   };
 
   const handleCopyToClipboard = () => {
-    navigator.clipboard.writeText(sqlCode)
-    .then(() => {
-      setCopyStatus(1);
-      setTimeout(() => {
-        setCopyStatus(0);
-      }, 2500);
-    })
-    .catch((err) => {
-      console.error("Failed to copy: ", err);
-      setCopyStatus(-1);
-      setTimeout(() => {
-        setCopyStatus(0);
-      }, 2500);
-    });
-  }
+    navigator.clipboard
+      .writeText(sqlCode)
+      .then(() => {
+        setCopyStatus(1);
+        setTimeout(() => {
+          setCopyStatus(0);
+        }, 2500);
+      })
+      .catch((err) => {
+        console.error("Failed to copy: ", err);
+        setCopyStatus(-1);
+        setTimeout(() => {
+          setCopyStatus(0);
+        }, 2500);
+      });
+  };
 
   // scroll event listener (prevents default scrolling)
   useEffect(() => {
@@ -1074,7 +1105,7 @@ function App() {
           aria-label="delete table"
           style={{
             transition: "background 0.2s",
-            borderRadius: "4px 0 0 4px",
+            borderRadius: "10px 0 0 10px",
             background: "#141414",
             color: "white",
           }}
@@ -1115,7 +1146,7 @@ function App() {
           color="primary"
           onClick={handleResetCanvasPos}
           style={{
-            borderRadius: "0 4px 4px 0",
+            borderRadius: "0 10px 10px 0",
             background: "#141414",
             color: "white",
           }}
@@ -1179,34 +1210,33 @@ function App() {
             InputProps={{ readOnly: true }}
             sx={{ fontFamily: "monospace", fontSize: "1rem" }}
           />
-          <Button
+          <IconButton
             variant="contained"
-            color="primary"
-            onClick={() => {
-              callGemeniAPI();
+            onClick={handleCopyToClipboard}
+            sx={{
+              backgroundColor: "black",
+              color: "white",
+              position: "absolute",
+              width: "40px",
+              height: "40px",
+              right: "29px",
+              bottom: "105px",
+              "&:hover": {
+                backgroundColor: "gray",
+                color: "black",
+              },
             }}
-            sx={{ mt: 2 }}
-          ></Button>
-          <IconButton 
-                  variant="contained"
-                  onClick={handleCopyToClipboard} 
-                  sx={{ 
-                    backgroundColor: 'black',
-                    color: 'white', 
-                    position: 'absolute',
-                    width: '40px',
-                    height: '40px',
-                    right: '29px',
-                    bottom:'105px',
-                    "&:hover": {
-                      backgroundColor: 'gray',
-                      color: 'black',
-                    }
-                    }}>
-            <ContentCopyIcon sx={{color: 'white'}}/>
+          >
+            <ContentCopyIcon sx={{ color: "white" }} />
           </IconButton>
           <Alert
-            severity={copyStatus === 1 ? "success" : copyStatus === -1 ? "error" : "info"}
+            severity={
+              copyStatus === 1
+                ? "success"
+                : copyStatus === -1
+                ? "error"
+                : "info"
+            }
             sx={{
               position: "absolute",
               top: "10px",
@@ -1219,45 +1249,75 @@ function App() {
           </Alert>
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeSQLDialog}>Close</Button>
+          <Button
+            onClick={closeSQLDialog}
+            sx={{ color: "black", fontWeight: "bold", textTransform: "none" }}
+            variant="text"
+          >
+            Close
+          </Button>
         </DialogActions>
       </Dialog>
-      <div
-        style={{
+      <Dropdown
+        placement="bottom-start"
+        sx={{
           position: "fixed",
           top: "1.78%",
           left: "1%",
-          zIndex: 1000,
+          zIndex: 500,
         }}
       >
-        <Button
-          variant="contained"
-          color="secondary"
-          onClick={openSQLDialog}
-          startIcon={<i className="material-icons" />}
-          style={{ marginRight: "10px" }}
-        >
-          Export SQL
-        </Button>
-        <div
-          style={{
+        <MenuButton
+          variant="solid"
+          color="primary"
+          sx={{
             position: "fixed",
             top: "1.78%",
-            left: "10%",
-            zIndex: 1000,
+            left: "1%",
+            minWidth: 36,
+            minHeight: 36,
+            width: 36,
+            height: 36,
+            borderRadius: 10,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            p: 0,
+            background: "black",
+            "&:hover, &:active, &.Mui-focusVisible, &:focus": {
+              backgroundColor: "black",
+            },
           }}
         >
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => setImportDialogOpen(true)}
-            fullWidth
-          >
+          <MenuIcon fontSize="small" />
+        </MenuButton>
+        <Menu
+          sx={{
+            top: "10 !important",
+            left: "10 !important",
+            minWidth: 120,
+            boxShadow: 3,
+            borderRadius: 10,
+          }}
+          slotProps={{
+            listbox: {
+              sx: {
+                marginLeft: 10,
+                minWidth: 120,
+              },
+            },
+          }}
+          placement="bottom-start"
+          disablePortal
+          keepMounted
+        >
+          <MenuItem onClick={openSQLDialog}>Export SQL</MenuItem>
+          <MenuItem onClick={() => setImportDialogOpen(true)}>
             Import SQL
-          </Button>
-          {importSQLDialog()}
-        </div>
-      </div>
+          </MenuItem>
+        </Menu>
+      </Dropdown>
+      {importSQLDialog()}
     </div>
   );
 }

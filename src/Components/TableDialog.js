@@ -94,7 +94,15 @@ function TableDialog(props) {
 
   return (
     <>
-      <Dialog open={isOpen} onClose={handleClose} maxWidth="md" fullWidth>
+      <Dialog
+        open={isOpen}
+        onClose={handleClose}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: { width: "50%", maxWidth: "50%", minWidth: "300px" },
+        }}
+      >
         <DialogTitle>
           {tempTableId ? "Editing Table" : "Create New Table"}
         </DialogTitle>
@@ -122,25 +130,72 @@ function TableDialog(props) {
             sx={{ mb: 3 }}
           />
 
-          <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-            Columns
-          </Typography>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleAddColumn}
-            sx={{ mb: 2 }}
+          {/* Columns header and Add button in a row */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginTop: 16,
+              marginBottom: 8,
+            }}
           >
-            Add Column
-          </Button>
+            <Typography variant="h6">Columns</Typography>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleAddColumn}
+              sx={{
+                background: "black",
+                minWidth: 0,
+                padding: "6px",
+                borderRadius: 2.5,
+                "&:hover, &:active, &.Mui-focusVisible, &:focus": {
+                  backgroundColor: "black",
+                },
+              }}
+            >
+              <AddIcon />
+            </Button>
+          </div>
+
           <List dense sx={{ my: 0, pointerEvents: "auto" }}>
             {tempColumns.map((column, index) => (
               <Accordion
                 key={index}
-                sx={{ width: "100%", boxShadow: "none", my: 0 }}
+                sx={{
+                  width: "100%",
+                  boxShadow: "none",
+                  my: 0,
+                  borderRadius: 10,
+                  overflow: "hidden",
+                  transition: "background 0s",
+                  "&:hover, &:focus-within": {
+                    backgroundColor: "rgba(0,0,0,0.06)",
+                  },
+                  "&:hover .AccordionDetails-highlight, &:focus-within .AccordionDetails-highlight":
+                    {
+                      backgroundColor: "rgba(0,0,0,0.06)",
+                    },
+                }}
               >
                 <Divider sx={{ mx: "auto", width: "98%", my: 0 }} />
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <AccordionSummary
+                  expandIcon={<ExpandMoreIcon />}
+                  sx={{
+                    background: "unset",
+                    transition: "background 0s",
+                    "&:hover, &.Mui-focused, &.Mui-expanded": {
+                      background: "unset",
+                    },
+                    "&.MuiAccordionSummary-root.Mui-expanded": {
+                      background: "unset",
+                    },
+                    "&.MuiAccordionSummary-root:focus-visible": {
+                      background: "unset",
+                    },
+                  }}
+                >
                   <span style={{ fontWeight: 500, padding: 10 }}>
                     {column.name || <em style={{ color: "#aaa" }}>Unnamed</em>}{" "}
                     <span style={{ color: "gray", fontStyle: "italic" }}>
@@ -149,7 +204,10 @@ function TableDialog(props) {
                     </span>
                   </span>
                 </AccordionSummary>
-                <AccordionDetails>
+                <AccordionDetails
+                  className="AccordionDetails-highlight"
+                  sx={{ px: 2, background: "unset !important" }}
+                >
                   <ColumnProps
                     tables={tables}
                     tempTable={tempTable}
@@ -165,6 +223,13 @@ function TableDialog(props) {
                       <IconButton
                         edge="end"
                         aria-label="delete"
+                        sx={{
+                          color: "black",
+                          transition: "color 0.1s",
+                          "&:hover": {
+                            color: "red",
+                          },
+                        }}
                         onClick={() => handleRemoveColumnWithPK(index)}
                       >
                         <DeleteIcon />
@@ -192,11 +257,19 @@ function TableDialog(props) {
           </List>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
+          <Button
+            onClick={handleClose}
+            sx={{ color: "black", fontWeight: "bold", textTransform: "none" }}
+            variant="text"
+          >
+            Cancel
+          </Button>
           <Button
             onClick={handleSubmit}
-            color="primary"
+            color="black"
             disabled={!tempTable.name || !allColumnsValid}
+            sx={{ color: "black", fontWeight: "bold", textTransform: "none" }}
+            variant="text"
           >
             {tempTableId ? "Update Table" : "Create Table"}
           </Button>

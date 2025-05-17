@@ -200,7 +200,13 @@ function ColumnProps(props) {
               checked={tempColumn.nullable}
               onChange={handleColumnNullableChange}
               disabled={tempColumn.primaryKey} // Primary keys can't be nullable
-              sx={{ flex: 1 }}
+              sx={{
+                flex: 1,
+                color: "black",
+                "&.Mui-checked": {
+                  color: "black",
+                },
+              }}
             />
           }
           label="Nullable"
@@ -210,6 +216,12 @@ function ColumnProps(props) {
             <Checkbox
               checked={tempColumn.unique}
               onChange={handleColumnUniqueChange}
+              sx={{
+                color: "black",
+                "&.Mui-checked": {
+                  color: "black",
+                },
+              }}
             />
           }
           label="Unique"
@@ -222,6 +234,12 @@ function ColumnProps(props) {
               disabled={
                 tempTable.primaryKey && tempTable.primaryKey !== tempColumn.name
               }
+              sx={{
+                color: "black",
+                "&.Mui-checked": {
+                  color: "black",
+                },
+              }}
             />
           }
           label={
@@ -243,6 +261,12 @@ function ColumnProps(props) {
             <Checkbox
               checked={tempColumn.foreignKey}
               onChange={handleColumnForeignKeyChange}
+              sx={{
+                color: "black",
+                "&.Mui-checked": {
+                  color: "black",
+                },
+              }}
             />
           }
           label="Foreign Key"
