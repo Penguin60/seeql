@@ -11,7 +11,7 @@ Table = {
 StandardColumn = {
     name: '',
     type: '',
-    default: '',
+    typeLength: '',
     nullable: true,
     unique: false,
     primaryKey: false,
