@@ -282,49 +282,67 @@ function App() {
     setIsPanning(false);
   };
 
-  // Table dragging handlers
-  const handleTableMouseDown = (e, tableId) => {
-    e.stopPropagation(); // Prevent canvas panning
-    setDraggedTable(tableId);
-    setStartDragPosition({
-      x: e.clientX,
-      y: e.clientY,
-    });
-  };
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
-  const handleTableMouseMove = (e) => {
-    if (draggedTable) {
-      e.stopPropagation(); // Prevent canvas panning
-
-      const deltaX = (e.clientX - startDragPosition.x) / scale;
-      const deltaY = (e.clientY - startDragPosition.y) / scale;
-
-      setTables((prevTables) =>
-        prevTables.map((table) => {
+useEffect(() => {
+  // Only add document handlers when we're dragging a table
+  if (draggedTable) {
+    // Document-level mouse move handler for table dragging
+    const handleDocumentMouseMove = (e) => {
+      // Calculate the table position directly from cursor position
+      // maintaining the initial offset
+      const newX = (e.clientX - position.x) / scale - dragOffset.x;
+      const newY = (e.clientY - position.y) / scale - dragOffset.y;
+      
+      setTables(prevTables =>
+        prevTables.map(table => {
           if (table.id === draggedTable) {
             return {
               ...table,
               position: {
-                x: table.position.x + deltaX,
-                y: table.position.y + deltaY,
-              },
+                x: newX,
+                y: newY
+              }
             };
           }
           return table;
         })
       );
+    };
+    
+    // Document-level mouse up handler
+    const handleDocumentMouseUp = () => {
+      setDraggedTable(null);
+    };
+    
+    // Add document-level event listeners
+    document.addEventListener('mousemove', handleDocumentMouseMove);
+    document.addEventListener('mouseup', handleDocumentMouseUp);
+    
+    // Clean up
+    return () => {
+      document.removeEventListener('mousemove', handleDocumentMouseMove);
+      document.removeEventListener('mouseup', handleDocumentMouseUp);
+    };
+  }
+}, [draggedTable, dragOffset, position, scale]);
 
-      setStartDragPosition({
-        x: e.clientX,
-        y: e.clientY,
-      });
-    }
-  };
-
-  const handleTableMouseUp = () => {
-    setDraggedTable(null);
-  };
-
+// Add this function after your other handlers (around line 290)
+const handleTableMouseDown = (e, tableId) => {
+  e.stopPropagation(); // Prevent canvas panning
+  e.preventDefault(); // Prevent text selection
+  
+  // Find the table being dragged
+  const table = tables.find(t => t.id === tableId);
+  if (!table) return;
+  
+  // Calculate the offset between mouse position and table position
+  const offsetX = (e.clientX - position.x) / scale - table.position.x;
+  const offsetY = (e.clientY - position.y) / scale - table.position.y;
+  
+  setDragOffset({ x: offsetX, y: offsetY });
+  setDraggedTable(tableId);
+};
   // scroll wheel zoom handler
   const handleWheel = (e) => {
     e.preventDefault();
@@ -349,7 +367,7 @@ function App() {
   // cursor exit handler
   const handleMouseLeave = () => {
     setIsPanning(false);
-    setDraggedTable(null);
+    // setDraggedTable(null);
   };
 
   // no idea wtf is going on here
@@ -620,21 +638,24 @@ function App() {
           transformOrigin: "0 0",
           pointerEvents: "none",
         }}
-        onMouseMove={handleTableMouseMove}
-        onMouseUp={handleTableMouseUp}
-        onMouseLeave={handleTableMouseUp}
       >
         {tables.map((table) => (
-          <div
+          // Update the table div around line 560 to add the mousedown handler
+            <div
             key={table.id}
             className="table-component"
             style={{
-              left: `${table.position.x}px`,
-              top: `${table.position.y}px`,
-              pointerEvents: "auto", // Make tables interactive
+                left: `${table.position.x}px`,
+                top: `${table.position.y}px`,
+                pointerEvents: "auto",
+                userSelect: "none",
+                WebkitUserSelect: "none",
+                MozUserSelect: "none",
+                msUserSelect: "none",
+                cursor: "move" // Add move cursor
             }}
             onMouseDown={(e) => handleTableMouseDown(e, table.id)}
-          >
+            >
             <div className="table-component-header">
               {table.name || "Unnamed Table"}
             </div>
@@ -737,19 +758,7 @@ function App() {
                         }`
                       : ""
                   }`}
-                />
-                <ListItemText
-                  primary={`${column.name} (${column.type})`}
-                  secondary={`${column.nullable ? "Nullable" : "Not Null"}${
-                    column.unique ? ", Unique" : ""
-                  }${column.primaryKey ? ", Primary Key" : ""}`}
-                />
-                <ListItemText
-                  primary={`${column.name} (${column.type})`}
-                  secondary={`${column.nullable ? "Nullable" : "Not Null"}${
-                    column.unique ? ", Unique" : ""
-                  }${column.primaryKey ? ", Primary Key" : ""}`}
-                />
+                />                      
               </ListItem>
             ))}
           </List>
