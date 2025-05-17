@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { GoogleGenAI } from "@google/genai";
 import "./App.css";
 import {
   Alert,
@@ -20,6 +21,7 @@ import AddIcon from "@mui/icons-material/Add";
 import { MyLocation } from "@mui/icons-material";
 import TrashIcon from "@mui/icons-material/Delete";
 import MenuIcon from "@mui/icons-material/Menu";
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import CanvasStatistics from "./Components/CanvasStatistics";
 import { Add } from "@mui/icons-material";
 import TableDialog from "./Components/TableDialog";
@@ -31,6 +33,7 @@ import {
 import Menu from "@mui/joy/Menu";
 import MenuButton from "@mui/joy/MenuButton";
 import Dropdown from "@mui/joy/Dropdown";
+import { render } from "@testing-library/react";
 
 function App() {
   document.body.style.overflow = "hidden";
@@ -54,8 +57,8 @@ function App() {
 
   const [editingTableId, setEditingTableId] = useState(null);
 
-  const handleTableMouseMove = () => {};
-  const handleTableMouseUp = () => {};
+  const handleTableMouseMove = () => { };
+  const handleTableMouseUp = () => { };
 
   const [isOverTrash, setIsOverTrash] = useState(false);
 
@@ -78,6 +81,31 @@ function App() {
   const [sqlDialogOpen, setSqlDialogOpen] = useState(false);
   const [sqlCode, setSqlCode] = useState("");
   const [sqlCodeType, setSqlCodeType] = useState("SQL");
+
+  const ai = new GoogleGenAI({ apiKey: "AIzaSyBolZe3UbhmSvnjmEPKjEzArrupXeAyVCc" });
+
+  async function callGeminiAPI() {
+
+    if(tables.length === 0) {
+      alert("Create at least one table before normalizing");
+      return;
+    }
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: "Fix the SQL code below by using bcnf normalizing form. The output should only be pure code with no comments. SQL CODE:" + sqlCode
+    });
+
+    const text = response.text;
+    console.log(text);
+    renderSQL(text);
+  }
+
+  async function renderSQL(PromptCode) {
+    const newTables = generateTablesFromSQL(PromptCode);
+    console.log(newTables);
+    setTables(newTables);
+  }
 
   const [copyStatus, setCopyStatus] = useState(0);
 
@@ -219,12 +247,12 @@ function App() {
       updatedTables = updatedTables.map((table) =>
         table.id === tempTableId
           ? {
-              ...table,
-              name: updatedTable.name,
-              notes: updatedTable.notes,
-              columns: updatedTable.columns,
-              primaryKey: updatedTable.primaryKey,
-            }
+            ...table,
+            name: updatedTable.name,
+            notes: updatedTable.notes,
+            columns: updatedTable.columns,
+            primaryKey: updatedTable.primaryKey,
+          }
           : table
       );
       setTables(updatedTables);
@@ -234,8 +262,6 @@ function App() {
   };
   const [yourTextState, setYourTextState] = useState("");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
-
-  const callGemeniAPI = () => {};
 
   const importSQLDialog = () => {
     return (
@@ -542,6 +568,7 @@ function App() {
    * name, type, typeLength, nullable, unique, primaryKey, foreignKey, references
    */
   const generateTablesFromSQL = (sql) => {
+    console.log(sql);
     const tableRegex = /CREATE\s+TABLE\s+([a-zA-Z0-9_]+)\s*\(([^;]*?)\);/gi;
     const columnLineRegex =
       /^\s*([a-zA-Z0-9_]+)\s+([a-zA-Z0-9_]+)(?:\((\d+)\))?([\s\S]*)$/m;
@@ -1032,9 +1059,8 @@ function App() {
                   table.columns.map((column, index) => (
                     <tr key={index} className="table-column">
                       <td
-                        className={`col-name ${
-                          column.primaryKey ? "primary-key" : ""
-                        }`}
+                        className={`col-name ${column.primaryKey ? "primary-key" : ""
+                          }`}
                       >
                         {column.name} {column.primaryKey && "🔑"}
                       </td>
@@ -1317,9 +1343,34 @@ function App() {
           </MenuItem>
         </Menu>
       </Dropdown>
+          <div
+          style={{
+            position: "fixed",
+            bottom: "1.78%",
+            left: "1%",
+            zIndex: 1000,
+          }}
+        ></div>
+
+          <Fab
+          color="primary"
+          aria-label="normalize"
+          style={{
+            zIndex: 1001,
+            width: "64px",
+            height: "64px",
+            margin: "0 -8px",
+            background: "black",
+            color: "white",
+          }}
+          onClick={() => callGeminiAPI}
+        >
+          <AutoFixHighIcon style={{ fontSize: "32px" }} />
+        </Fab>
       {importSQLDialog()}
     </div>
   );
 }
+
 
 export default App;
