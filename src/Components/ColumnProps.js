@@ -25,8 +25,8 @@ function ColumnProps(props) {
 
   // Column handling
   const handleColumnNameChange = (e) => {
-    // Disallow semicolons, numbers, and spaces in column names
-    if (/^[^;\d\s]*$/.test(e.target.value)) {
+    // Allow only letters a-z and A-Z
+    if (/^[a-zA-Z]*$/.test(e.target.value)) {
       const newName = e.target.value;
       // Update tempTable.primaryKey if this column is PK
       if (tempColumn.primaryKey) {

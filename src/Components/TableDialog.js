@@ -73,14 +73,23 @@ function TableDialog(props) {
   };
 
   const handleTableNameChange = (e) => {
-    // Disallow semicolons, numbers, and spaces in column names
-    if (/^[^;\d\s]*$/.test(e.target.value)) {
+    if (/^[a-zA-Z]*$/.test(e.target.value)) {
       setTempTable({ ...tempTable, name: e.target.value });
     }
   };
 
   const handleTableNotesChange = (e) => {
     setTempTable({ ...tempTable, notes: e.target.value });
+  };
+
+  // Wrap the passed-in handleRemoveColumn to add PK clearing logic
+  const handleRemoveColumnWithPK = (index) => {
+    const removedCol = tempColumns[index];
+    handleRemoveColumn(index);
+    // If the removed column was the primary key, reset tempTable.primaryKey to null
+    if (removedCol.primaryKey && tempTable.primaryKey === removedCol.name) {
+      setTempTable({ ...tempTable, primaryKey: null });
+    }
   };
 
   return (
@@ -156,7 +165,7 @@ function TableDialog(props) {
                       <IconButton
                         edge="end"
                         aria-label="delete"
-                        onClick={() => handleRemoveColumn(index)}
+                        onClick={() => handleRemoveColumnWithPK(index)}
                       >
                         <DeleteIcon />
                       </IconButton>

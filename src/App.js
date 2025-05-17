@@ -139,7 +139,7 @@ function App() {
     );
   };
 
-  const handleTempRemoveColumn = (index) => {
+  const handleTempColumnRemove = (index) => {
     setTempColumns((cols) => cols.filter((_, i) => i !== index));
   };
 
@@ -1084,7 +1084,7 @@ const generateTablesFromSQL = (sql) => {
         setTempColumns={setTempColumns}
         handleAddColumn={addColumn}
         handleColumnChange={handleTempColumnChange}
-        handleRemoveColumn={handleTempRemoveColumn}
+        handleRemoveColumn={handleTempColumnRemove}
         handleTableDialogSubmit={handleTableDialogSubmit}
       />
 
