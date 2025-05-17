@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import './App.css';
+import AddNewTable from './Components/AddNewTable';
 
 function App() {
   const canvasRef = useRef(null);
@@ -8,6 +9,14 @@ function App() {
   const [scale, setScale] = useState(1);
   const [startPanPosition, setStartPanPosition] = useState({ x: 0, y: 0 });
   
+  // array to hold instances of generated tables
+  const [tables, setTables] = useState([]);
+
+  const handleAddTable = () => {
+    const newTableId = `table-${Date.now()}`;
+    setTables([...tables, { id: newTableId }]);
+  };
+
   // mouse down for panning handler
   const handleMouseDown = (e) => {
     setIsPanning(true);
@@ -123,6 +132,27 @@ function App() {
         width={window.innerWidth}
         height={window.innerHeight}
       />
+      <div 
+      className="tables-area"
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+        transformOrigin: '0 0'
+      }}
+    >
+      {tables.map(table => (
+        <div key={table.id} className="table-component">
+          <div className="table-placeholder">
+            SQL Table Schema (To be implemented)
+          </div>
+        </div>
+      ))}
+    </div>
+      <AddNewTable onAddTable={handleAddTable}/>
     </div>
   );
 }
