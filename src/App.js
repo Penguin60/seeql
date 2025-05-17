@@ -422,6 +422,7 @@ function App() {
 
   // canvas drawing
   // Replace the existing useEffect for canvas drawing at line 324
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -434,9 +435,9 @@ function App() {
     ctx.translate(position.x, position.y);
     ctx.scale(scale, scale);
 
-    // Draw relationship lines between tables
-    tables.forEach((table) => {
-      table.columns.forEach((column) => {
+    // node edge lines
+    tables.forEach((sourceTable) => {
+      sourceTable.columns.forEach((column, columnIndex) => {
         if (
           column.foreignKey &&
           column.references?.tableId &&
@@ -446,55 +447,108 @@ function App() {
             (t) => t.id === column.references.tableId
           );
           if (targetTable) {
-            // Source coordinates (from child table with FK)
-            const sourceX = table.position.x + 150; // Approximate middle of table width
-            const sourceY = table.position.y + 30; // Approximate header position
+            const targetColumnIndex = targetTable.columns.findIndex(
+              (col) => col.name === column.references.columnName
+            );
 
-            // Target coordinates (to parent table with PK/referenced column)
-            const targetX = targetTable.position.x + 150;
-            const targetY = targetTable.position.y + 30;
+            if (targetColumnIndex === -1) return;
 
-            // Draw relationship line
+            // dimensions
+            // TODO: Update to be dynamic or update with new ui
+            const tableWidth = 215;
+            const headerHeight = 40;
+            const rowHeight = 125;
+
+            const verticalOffset = 8;
+
+            const sourceRowY =
+              sourceTable.position.y +
+              headerHeight +
+              columnIndex * rowHeight +
+              rowHeight / 2 +
+              verticalOffset;
+
+            const targetRowY =
+              targetTable.position.y +
+              headerHeight +
+              targetColumnIndex * rowHeight +
+              rowHeight / 2 +
+              verticalOffset;
+
+            // Calculate table centers for horizontal positioning
+            const sourceTableCenterX = sourceTable.position.x + tableWidth / 2;
+            const targetTableCenterX = targetTable.position.x + tableWidth / 2;
+
+            // target position
+            const dx = targetTableCenterX - sourceTableCenterX;
+
+            let sourceX, targetX;
+            const sourceY = sourceRowY;
+            const targetY = targetRowY;
+
+            if (dx > 0) {
+              // target left
+              sourceX = sourceTable.position.x + tableWidth;
+              targetX = targetTable.position.x + 10;
+            } else {
+              // target right
+              sourceX = sourceTable.position.x + 20;
+              targetX = targetTable.position.x + tableWidth;
+            }
+
+            const distance = Math.sqrt(
+              Math.pow(targetX - sourceX, 2) + Math.pow(targetY - sourceY, 2)
+            );
+            const controlPointDistance = Math.min(80, distance / 3);
+
+            const sourceIsRightSide = dx > 0;
+            const controlPoint1X =
+              sourceX + (sourceIsRightSide ? 1 : -1) * controlPointDistance;
+            const controlPoint1Y = sourceY;
+            const controlPoint2X =
+              targetX + (sourceIsRightSide ? -1 : 1) * controlPointDistance;
+            const controlPoint2Y = targetY;
+
+            // line draw
             ctx.beginPath();
             ctx.strokeStyle = "#3182CE";
-            ctx.lineWidth = 2 / scale; // Adjust line width for zoom
-            ctx.setLineDash([5 / scale, 5 / scale]); // Dashed line adjusted for zoom
+            ctx.lineWidth = 2 / scale;
+            ctx.setLineDash([0]);
+
+            // curve draw
             ctx.moveTo(sourceX, sourceY);
-            ctx.lineTo(targetX, targetY);
+            ctx.bezierCurveTo(
+              controlPoint1X,
+              controlPoint1Y,
+              controlPoint2X,
+              controlPoint2Y,
+              targetX,
+              targetY
+            );
             ctx.stroke();
-            ctx.setLineDash([]); // Reset to solid line
 
-            // Draw arrow at the target end
-            const angle = Math.atan2(targetY - sourceY, targetX - sourceX);
-            const arrowSize = 10 / scale;
+            // arrow draw
+            const arrowSize = 8 / scale;
 
-            ctx.beginPath();
-            ctx.fillStyle = "#3182CE";
-            ctx.moveTo(
-              targetX -
-                arrowSize * Math.cos(angle) +
-                (arrowSize * Math.sin(angle)) / 2,
-              targetY -
-                arrowSize * Math.sin(angle) -
-                (arrowSize * Math.cos(angle)) / 2
+            const endPointDirection = calculateCurveEndDirection(
+              controlPoint2X,
+              controlPoint2Y,
+              targetX,
+              targetY
             );
-            ctx.lineTo(targetX, targetY);
-            ctx.lineTo(
-              targetX -
-                arrowSize * Math.cos(angle) -
-                (arrowSize * Math.sin(angle)) / 2,
-              targetY -
-                arrowSize * Math.sin(angle) +
-                (arrowSize * Math.cos(angle)) / 2
+
+            drawArrow(
+              ctx,
+              targetX,
+              targetY,
+              endPointDirection,
+              arrowSize,
+              "#3182CE"
             );
-            ctx.closePath();
-            ctx.fill();
           }
         }
       });
     });
-
-    // Your existing shapes
 
     const renderShapes = true;
 
@@ -522,6 +576,26 @@ function App() {
     ctx.restore();
   }, [position, scale, tables]);
 
+  const calculateCurveEndDirection = (cpX, cpY, endX, endY) => {
+    return Math.atan2(endY - cpY, endX - cpX);
+  };
+
+  const drawArrow = (ctx, x, y, angle, size, color) => {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+
+    ctx.beginPath();
+    ctx.fillStyle = color;
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-size, size / 2);
+    ctx.lineTo(-size, -size / 2);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+  };
+
   return (
     <div className="App">
       <canvas
@@ -544,7 +618,7 @@ function App() {
           height: "100%",
           transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
           transformOrigin: "0 0",
-          pointerEvents: "none", // Allow clicks to pass through to canvas by default
+          pointerEvents: "none",
         }}
         onMouseMove={handleTableMouseMove}
         onMouseUp={handleTableMouseUp}
@@ -588,7 +662,6 @@ function App() {
         ))}
       </div>
 
-      {/* MUI Floating Action Button */}
       <Fab
         color="primary"
         aria-label="add table"
@@ -608,7 +681,6 @@ function App() {
         Reset Position
       </button>
 
-      {/* Table Creation Dialog */}
       <Dialog open={dialogOpen} onClose={closeDialog} maxWidth="md" fullWidth>
         <DialogTitle>Create New Table</DialogTitle>
         <DialogContent>
@@ -639,7 +711,6 @@ function App() {
           </Typography>
           <Divider sx={{ mb: 2 }} />
 
-          {/* Column list */}
           <List dense sx={{ mb: 2 }}>
             {newTable.columns.map((column, index) => (
               <ListItem
@@ -683,7 +754,6 @@ function App() {
             ))}
           </List>
 
-          {/* Add new column */}
           <Typography variant="subtitle1" sx={{ mt: 2 }}>
             Add New Column
           </Typography>
@@ -707,7 +777,6 @@ function App() {
                 <MenuItem value="int">int</MenuItem>
                 <MenuItem value="varchar">varchar</MenuItem>
                 <MenuItem value="boolean">boolean</MenuItem>
-                {/* Add more types as needed */}
               </TextField>
             </div>
           </div>
