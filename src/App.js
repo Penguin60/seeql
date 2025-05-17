@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import './App.css';
 import AddNewTable from './Components/AddNewTable';
+import CanvasStatistics from './Components/CanvasStatistics';
 
 function App() {
   const canvasRef = useRef(null);
@@ -113,11 +114,6 @@ function App() {
     
     ctx.restore();
     
-    ctx.font = '16px Arial';
-    ctx.fillStyle = 'black';
-    ctx.fillText(`Scale: ${scale.toFixed(2) * 100}%`, 10, 30);
-    ctx.fillText(`Position: (${position.x.toFixed(0)}, ${position.y.toFixed(0)})`, 10, 60);
-    
   }, [position, scale]);
 
   return (
@@ -153,6 +149,7 @@ function App() {
       ))}
     </div>
       <AddNewTable onAddTable={handleAddTable}/>
+      <CanvasStatistics scale={scale} />
     </div>
   );
 }
