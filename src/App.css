@@ -52,7 +52,7 @@
 .table-component {
   position: absolute;
   min-width: 200px;
-  background-color: white;
+  background-color: transparent;
   border-radius: 6px;
   pointer-events: auto; /* Make the table interactive */
   margin: 10px;
