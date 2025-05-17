@@ -103,7 +103,7 @@ function App() {
   // scroll wheel zoom handler
   const handleWheel = (e) => {
     e.preventDefault();
-    const delta = e.deltaY * -0.01;
+    const delta = e.deltaY * -0.003;
     const newScale = Math.min(Math.max(0.1, scale + delta), 10);
     
     // get cursor position relative to canvas
