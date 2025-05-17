@@ -705,9 +705,27 @@ function App() {
               rowHeight / 2 +
               verticalOffset;
 
-            // Calculate table centers for horizontal positioning
-            const sourceTableCenterX = sourceTable.position.x + tableWidth / 2;
-            const targetTableCenterX = targetTable.position.x + tableWidth / 2;
+            const getTableWidth = (tableObj) => {
+              const tableElements =
+                document.querySelectorAll(".table-component");
+              const tableElement = Array.from(tableElements).find((el) => {
+                const left = parseInt(el.style.left);
+                const top = parseInt(el.style.top);
+                return (
+                  Math.abs(left - tableObj.position.x) < 5 &&
+                  Math.abs(top - tableObj.position.y) < 5
+                );
+              });
+              return tableElement ? tableElement.offsetWidth : tableWidth; // fallback to default if not found
+            };
+
+            const sourceTableWidth = getTableWidth(sourceTable);
+            const targetTableWidth = getTableWidth(targetTable);
+
+            const sourceTableCenterX =
+              sourceTable.position.x + sourceTableWidth / 2;
+            const targetTableCenterX =
+              targetTable.position.x + targetTableWidth / 2;
 
             // target position
             const dx = targetTableCenterX - sourceTableCenterX;
@@ -718,12 +736,12 @@ function App() {
 
             if (dx > 0) {
               // target left
-              sourceX = sourceTable.position.x + tableWidth;
+              sourceX = sourceTable.position.x + sourceTableWidth;
               targetX = targetTable.position.x + 10;
             } else {
               // target right
               sourceX = sourceTable.position.x + 20;
-              targetX = targetTable.position.x + tableWidth;
+              targetX = targetTable.position.x + targetTableWidth + 10;
             }
 
             const distance = Math.sqrt(
@@ -741,7 +759,7 @@ function App() {
 
             // line draw
             ctx.beginPath();
-            ctx.strokeStyle = "#3182CE";
+            ctx.strokeStyle = "#000000";
             ctx.lineWidth = 2 / scale;
             ctx.setLineDash([0]);
 
@@ -773,7 +791,7 @@ function App() {
               targetY,
               endPointDirection,
               arrowSize,
-              "#3182CE"
+              "#000000"
             );
           }
         }
