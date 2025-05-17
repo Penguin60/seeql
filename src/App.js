@@ -24,10 +24,12 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import CanvasStatistics from "./Components/CanvasStatistics";
+import TableDialog from "./Components/TableDialog";
 import { convertToDrizzle, convertToPrisma, convertToSpring } from "./Components/ConvertToCode";
 
 function App() {
   document.body.style.overflow = "hidden";
+  const STATS_FADE_OUT_TIME = 2000; // 2 seconds
   const canvasRef = useRef(null);
   const [isPanning, setIsPanning] = useState(false);
   const [position, setPosition] = useState({
@@ -45,10 +47,10 @@ function App() {
   // array to hold instances of generated tables
   const [tables, setTables] = useState([]);
 
-  // Dialog state
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingTableId, setEditingTableId] = useState(null);
-  const [newTable, setNewTable] = useState({
+  // Table dialog state
+  const [tableDialogOpen, setTableDialogOpen] = useState(false);
+  const [tempTableId, setTempTableId] = useState(null);
+  const [tempTable, setTempTable] = useState({
     name: "",
     notes: "",
     columns: [],
@@ -57,20 +59,8 @@ function App() {
     position: { x: 100, y: 100 },
   });
 
-  // Temp column state for adding columns
-  const [tempColumn, setTempColumn] = useState({
-    name: "",
-    type: "",
-    typeLength: "",
-    nullable: true,
-    unique: false,
-    primaryKey: false,
-    foreignKey: false,
-    references: {
-      tableId: "",
-      columnName: "",
-    },
-  });
+  // Temp columns state for editing columns in parallel
+  const [tempColumns, setTempColumns] = useState([]);
 
   // SQL dialog state
   const [sqlDialogOpen, setSqlDialogOpen] = useState(false);
@@ -83,110 +73,11 @@ function App() {
     const tableEdit = tables.find((t) => t.id === tableId);
     if (!tableEdit) return;
 
-    setNewTable({
+    setTempTable({
       ...tableEdit,
     });
-    setEditingTableId(tableId);
-    setDialogOpen(true);
-  };
-
-  const handleUpdateTable = () => {
-    if (newTable.name) {
-      // If there's data in the temp column fields, add it before updating
-      let finalColumns = [...newTable.columns];
-      let finalPrimaryKey = newTable.primaryKey;
-
-      if (tempColumn.name && tempColumn.type) {
-        finalColumns = [...finalColumns, { ...tempColumn }];
-        if (tempColumn.primaryKey) {
-          finalPrimaryKey = tempColumn.name;
-        }
-      }
-
-      // Find the original table to compare columns
-      const originalTable = tables.find((t) => t.id === editingTableId);
-
-      // Find removed columns by comparing original with updated columns
-      const removedColumns = originalTable.columns.filter(
-        (origCol) =>
-          !finalColumns.some((newCol) => newCol.name === origCol.name)
-      );
-
-      // Create a copy of tables to update
-      let updatedTables = [...tables];
-
-      // Process cascade deletion for removed columns
-      // Replace the existing updateReferences function in handleUpdateTable
-
-      // Process cascade deletion for removed columns
-      if (removedColumns.length > 0) {
-        // Track processed columns to avoid duplicates
-        const processedPairs = new Set();
-
-        // Function to update direct references only
-        const updateReferences = (tableId, columnName) => {
-          // Find the original column's properties before it's removed
-          const originalColumn = originalTable.columns.find(
-            (col) => col.name === columnName
-          );
-          if (!originalColumn) return;
-
-          // Prevent duplicate processing
-          const pairKey = `${tableId}-${columnName}`;
-          if (processedPairs.has(pairKey)) return;
-          processedPairs.add(pairKey);
-
-          // Update all tables with direct references to this column
-          updatedTables = updatedTables.map((table) => {
-            // Skip the table being edited
-            if (table.id === editingTableId) return table;
-
-            const updatedColumns = table.columns.map((column) => {
-              if (
-                column.foreignKey &&
-                column.references &&
-                column.references.tableId === tableId &&
-                column.references.columnName === columnName
-              ) {
-                // Convert foreign key to a standalone column with inherited properties
-                return {
-                  ...column,
-                  // Copy properties from the original column
-                  nullable: originalColumn.nullable,
-                  unique: true, // Make it unique
-                  foreignKey: false, // Remove foreign key status
-                  references: { tableId: "", columnName: "" },
-                };
-              }
-              return column;
-            });
-
-            return { ...table, columns: updatedColumns };
-          });
-        };
-
-        // Process each removed column
-        removedColumns.forEach((column) => {
-          updateReferences(editingTableId, column.name);
-        });
-      }
-      // Update the edited table itself
-      updatedTables = updatedTables.map((table) =>
-        table.id === editingTableId
-          ? {
-              ...table,
-              name: newTable.name,
-              notes: newTable.notes,
-              columns: finalColumns,
-              primaryKey: finalPrimaryKey,
-            }
-          : table
-      );
-
-      setTables(updatedTables);
-      setDialogOpen(false);
-      resetFormFields();
-    }
+    setTempTableId(tableId);
+    setTableDialogOpen(true);
   };
 
   const handleResetCanvasPos = () => {
@@ -196,58 +87,12 @@ function App() {
 
   const openNewTableDialog = () => {
     resetFormFields();
-    setDialogOpen(true);
-  };
-
-  const closeDialog = () => {
-    resetFormFields();
-    setDialogOpen(false);
-  };
-
-  const handleTableNameChange = (e) => {
-    setNewTable({ ...newTable, name: e.target.value });
-  };
-
-  const handleTableNotesChange = (e) => {
-    setNewTable({ ...newTable, notes: e.target.value });
-  };
-
-  // Column handling
-  const handleColumnNameChange = (e) => {
-    setTempColumn({ ...tempColumn, name: e.target.value });
-  };
-
-  const handleColumnTypeChange = (e) => {
-    setTempColumn({ ...tempColumn, type: e.target.value });
-  };
-
-  const handleColumnTypeLengthChange = (e) => {
-    setTempColumn({ ...tempColumn, typeLength: e.target.value });
-  };
-
-  const handleColumnNullableChange = (e) => {
-    setTempColumn({ ...tempColumn, nullable: e.target.checked });
-  };
-
-  const handleColumnUniqueChange = (e) => {
-    setTempColumn({ ...tempColumn, unique: e.target.checked });
-  };
-  const handleColumnForeignKeyChange = (e) => {
-    const isForeignKey = e.target.checked;
-
-    setTempColumn({
-      ...tempColumn,
-      foreignKey: isForeignKey,
-      // Reset references if turning off foreign key
-      references: isForeignKey
-        ? tempColumn.references
-        : { tableId: "", columnName: "" },
-    });
+    setTableDialogOpen(true);
   };
 
   const resetFormFields = () => {
     // Reset main table form
-    setNewTable({
+    setTempTable({
       name: "",
       notes: "",
       columns: [],
@@ -256,8 +101,17 @@ function App() {
       position: { x: 100, y: 100 },
     });
 
-    // Reset temp column form
-    setTempColumn({
+    // Reset editing state
+    setTempTableId(null);
+  };
+
+  // Sync tempColumns with tempTable.columns when dialog opens or table changes
+  useEffect(() => {
+    setTempColumns(tempTable.columns.map((col) => ({ ...col })));
+  }, [tableDialogOpen, tempTable.columns]);
+
+  const addColumn = () => {
+    const emptyCol = {
       name: "",
       type: "",
       typeLength: "",
@@ -265,158 +119,118 @@ function App() {
       unique: false,
       primaryKey: false,
       foreignKey: false,
-      references: {
-        tableId: "",
-        columnName: "",
-      },
-    });
-
-    // Reset editing state
-    setEditingTableId(null);
+      references: { tableId: "", columnName: "" },
+    };
+    setTempColumns((cols) => [...cols, emptyCol]);
   };
 
-  const handleReferenceTableChange = (e) => {
-    setTempColumn({
-      ...tempColumn,
-      references: {
-        ...tempColumn.references,
-        tableId: e.target.value,
-        columnName: "", // Reset column when table changes
-      },
-    });
+  const handleTempColumnChange = (index, updatedCol) => {
+    setTempColumns((cols) =>
+      cols.map((col, i) => (i === index ? updatedCol : col))
+    );
   };
-  const handleReferenceColumnChange = (e) => {
-    const selectedColumnName = e.target.value;
-    const referencedTable = tables.find(
-      (t) => t.id === tempColumn.references.tableId
-    );
-    const referencedColumn = referencedTable?.columns.find(
-      (c) => c.name === selectedColumnName
-    );
 
-    // Copy properties from the referenced column
-    if (referencedColumn) {
-      // Generate a suggested name (tableName_columnName format)
-      const suggestedName = tempColumn.name || `${selectedColumnName}`;
+  const handleTempRemoveColumn = (index) => {
+    setTempColumns((cols) => cols.filter((_, i) => i !== index));
+  };
 
-      setTempColumn({
-        ...tempColumn,
-        // Auto-populate name if it's empty
-        name: tempColumn.name || suggestedName,
-        // Copy type from referenced column
-        type: referencedColumn.type,
-        typeLength: referencedColumn.typeLength || "",
-        references: {
-          ...tempColumn.references,
-          columnName: selectedColumnName,
-        },
-      });
+  const isColumnValid = (col) => {
+    return col.name && col.type && /^[^;\d\s]*$/.test(col.name);
+  };
+
+  const allColumnsValid =
+    tempColumns.length > 0 && tempColumns.every(isColumnValid);
+
+  const handleTableDialogSubmit = () => {
+    if (!tempTable.name || !allColumnsValid) return;
+    // Save tempColumns to tempTable and then to tables
+    const updatedTable = { ...tempTable, columns: tempColumns };
+    if (tempTableId) {
+      // Editing existing table
+      handleUpdateTable(updatedTable);
     } else {
-      // Just update the reference if column not found
-      setTempColumn({
-        ...tempColumn,
-        references: {
-          ...tempColumn.references,
-          columnName: selectedColumnName,
-        },
-      });
+      // Creating new table
+      handleCreateTable(updatedTable);
     }
+    setTableDialogOpen(false);
+    resetFormFields();
   };
 
-  const handleColumnPrimaryKeyChange = (e) => {
-    const isPrimaryKey = e.target.checked;
-
-    setTempColumn({
-      ...tempColumn,
-      primaryKey: isPrimaryKey,
-      // If setting as primary key, also make it not nullable and unique
-      nullable: isPrimaryKey ? false : tempColumn.nullable,
-      unique: isPrimaryKey ? true : tempColumn.unique,
-    });
-  };
-
-  const addColumn = () => {
-    if (tempColumn.name && tempColumn.type) {
-      // If the new column is a primary key, we need to update any existing primary key columns
-      let updatedColumns = [...newTable.columns];
-
-      if (tempColumn.primaryKey) {
-        // Remove primary key designation from any existing columns
-        updatedColumns = updatedColumns.map((col) => ({
-          ...col,
-          primaryKey: false,
-        }));
+  const handleUpdateTable = (updatedTable) => {
+    // updatedTable.columns is already set to tempColumns by the dialog
+    if (updatedTable.name) {
+      // Find the original table to compare columns
+      const originalTable = tables.find((t) => t.id === tempTableId);
+      const removedColumns = originalTable.columns.filter(
+        (origCol) =>
+          !updatedTable.columns.some((newCol) => newCol.name === origCol.name)
+      );
+      let updatedTables = [...tables];
+      if (removedColumns.length > 0) {
+        const processedPairs = new Set();
+        const updateReferences = (tableId, columnName) => {
+          const originalColumn = originalTable.columns.find(
+            (col) => col.name === columnName
+          );
+          if (!originalColumn) return;
+          const pairKey = `${tableId}-${columnName}`;
+          if (processedPairs.has(pairKey)) return;
+          processedPairs.add(pairKey);
+          updatedTables = updatedTables.map((table) => {
+            if (table.id === tempTableId) return table;
+            const updatedColumns = table.columns.map((column) => {
+              if (
+                column.foreignKey &&
+                column.references &&
+                column.references.tableId === tableId &&
+                column.references.columnName === columnName
+              ) {
+                return {
+                  ...column,
+                  nullable: originalColumn.nullable,
+                  unique: true,
+                  foreignKey: false,
+                  references: { tableId: "", columnName: "" },
+                };
+              }
+              return column;
+            });
+            return { ...table, columns: updatedColumns };
+          });
+        };
+        removedColumns.forEach((column) => {
+          updateReferences(tempTableId, column.name);
+        });
       }
-
-      setNewTable({
-        ...newTable,
-        columns: [...updatedColumns, { ...tempColumn }],
-        primaryKey: tempColumn.primaryKey
-          ? tempColumn.name
-          : newTable.primaryKey,
-      });
-
-      // Reset temp column
-      setTempColumn({
-        name: "",
-        type: "",
-        typeLength: "",
-        nullable: true,
-        unique: false,
-        primaryKey: false,
-        foreignKey: false,
-        references: {
-          tableId: "",
-          columnName: "",
-        },
-      });
+      updatedTables = updatedTables.map((table) =>
+        table.id === tempTableId
+          ? {
+              ...table,
+              name: updatedTable.name,
+              notes: updatedTable.notes,
+              columns: updatedTable.columns,
+              primaryKey: updatedTable.primaryKey,
+            }
+          : table
+      );
+      setTables(updatedTables);
+      setTableDialogOpen(false);
+      resetFormFields();
     }
   };
 
-  const removeColumn = (index) => {
-    const updatedColumns = [...newTable.columns];
-    const removedColumn = updatedColumns[index];
-
-    updatedColumns.splice(index, 1);
-
-    // If removing primary key column, reset the primary key
-    let updatedPrimaryKey = newTable.primaryKey;
-    if (removedColumn.primaryKey) {
-      updatedPrimaryKey = null;
-    }
-
-    setNewTable({
-      ...newTable,
-      columns: updatedColumns,
-      primaryKey: updatedPrimaryKey,
-    });
-  };
-
-  const handleCreateTable = () => {
+  const handleCreateTable = (newTable) => {
     if (newTable.name) {
-      // If there's data in the temp column fields, add it before creating the table
-      let finalColumns = [...newTable.columns];
-      let finalPrimaryKey = newTable.primaryKey;
-
-      if (tempColumn.name && tempColumn.type) {
-        finalColumns = [...finalColumns, { ...tempColumn }];
-        if (tempColumn.primaryKey) {
-          finalPrimaryKey = tempColumn.name;
-        }
-      }
-
       const newTableId = `table-${Date.now()}`;
       setTables([
         ...tables,
         {
           id: newTableId,
           ...newTable,
-          columns: finalColumns,
-          primaryKey: finalPrimaryKey,
           position: { x: 0, y: 0 },
         },
       ]);
-      setDialogOpen(false);
+      setTableDialogOpen(false);
       resetFormFields();
     }
   };
@@ -450,6 +264,48 @@ function App() {
 
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
+  useEffect(() => {
+    // Only add document handlers when we're dragging a table
+    if (draggedTable) {
+      // Document-level mouse move handler for table dragging
+      const handleDocumentMouseMove = (e) => {
+        // Calculate the table position directly from cursor position
+        // maintaining the initial offset
+        const newX = (e.clientX - position.x) / scale - dragOffset.x;
+        const newY = (e.clientY - position.y) / scale - dragOffset.y;
+
+        setTables((prevTables) =>
+          prevTables.map((table) => {
+            if (table.id === draggedTable) {
+              return {
+                ...table,
+                position: {
+                  x: newX,
+                  y: newY,
+                },
+              };
+            }
+            return table;
+          })
+        );
+      };
+
+      // Document-level mouse up handler
+      const handleDocumentMouseUp = () => {
+        setDraggedTable(null);
+      };
+
+      // Add document-level event listeners
+      document.addEventListener("mousemove", handleDocumentMouseMove);
+      document.addEventListener("mouseup", handleDocumentMouseUp);
+
+      // Clean up
+      return () => {
+        document.removeEventListener("mousemove", handleDocumentMouseMove);
+        document.removeEventListener("mouseup", handleDocumentMouseUp);
+      };
+    }
+  }, [draggedTable, dragOffset, position, scale]);
   useEffect(() => {
     // Only add document handlers when we're dragging a table
     if (draggedTable) {
@@ -637,6 +493,11 @@ function App() {
     setSqlDialogOpen(false);
   };
 
+  const handleCloseTableDialog = () => {
+    resetFormFields();
+    setTableDialogOpen(false);
+  };
+
   // scroll event listener (prevents default scrolling)
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -821,6 +682,18 @@ function App() {
     ctx.restore();
   };
 
+  // Dummy state to force re-render for CanvasStatistics fade-out
+  const [statsTick, setStatsTick] = useState(0);
+  useEffect(() => {
+    // Only set interval if stats are visible
+    if (Date.now() - lastZoomTime < STATS_FADE_OUT_TIME) {
+      const interval = setInterval(() => {
+        setStatsTick((tick) => tick + 1);
+      }, 100);
+      return () => clearInterval(interval);
+    }
+  }, [lastZoomTime, statsTick]);
+
   return (
     <div className="App">
       <canvas
@@ -947,227 +820,31 @@ function App() {
         <AddIcon />
       </Fab>
 
-      {Date.now() - lastZoomTime < 2000 && <CanvasStatistics scale={scale} />}
+      {/* Show CanvasStatistics with fade-out */}
+      <CanvasStatistics
+        scale={scale}
+        visible={Date.now() - lastZoomTime < STATS_FADE_OUT_TIME}
+      />
       <button className="resetCanvasButton" onClick={handleResetCanvasPos}>
         Reset Position
       </button>
 
-      <Dialog open={dialogOpen} onClose={closeDialog} maxWidth="md" fullWidth>
-        <DialogTitle>Create New Table</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Table Name"
-            fullWidth
-            variant="outlined"
-            value={newTable.name}
-            onChange={handleTableNameChange}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            margin="dense"
-            label="Notes"
-            fullWidth
-            variant="outlined"
-            multiline
-            rows={2}
-            value={newTable.notes}
-            onChange={handleTableNotesChange}
-            sx={{ mb: 3 }}
-          />
-
-          <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-            Columns
-          </Typography>
-          <Divider sx={{ mb: 2 }} />
-
-          <List dense sx={{ mb: 2 }}>
-            {newTable.columns.map((column, index) => (
-              <ListItem
-                key={index}
-                secondaryAction={
-                  <IconButton
-                    edge="end"
-                    aria-label="delete"
-                    onClick={() => removeColumn(index)}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                }
-              >
-                <ListItemText
-                  primary={`${column.name} (${column.type})`}
-                  secondary={`${column.nullable ? "Nullable" : "Not Null"}${
-                    column.unique ? ", Unique" : ""
-                  }${column.primaryKey ? ", Primary Key" : ""}${
-                    column.foreignKey && column.references?.tableId
-                      ? `, FK → ${
-                          tables.find((t) => t.id === column.references.tableId)
-                            ?.name || ""
-                        }`
-                      : ""
-                  }`}
-                />
-              </ListItem>
-            ))}
-          </List>
-
-          <Typography variant="subtitle1" sx={{ mt: 2 }}>
-            Add New Column
-          </Typography>
-          <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
-            <TextField
-              label="Column Name"
-              value={tempColumn.name}
-              onChange={handleColumnNameChange}
-              size="small"
-              sx={{ flex: 1 }}
-            />
-            <div style={{ flex: 1, marginTop: "0px" }}>
-              <TextField
-                select
-                label="Data Type"
-                value={tempColumn.type}
-                onChange={handleColumnTypeChange}
-                size="small"
-                fullWidth
-              >
-                <MenuItem value="int">int</MenuItem>
-                <MenuItem value="varchar">varchar</MenuItem>
-                <MenuItem value="boolean">boolean</MenuItem>
-              </TextField>
-            </div>
-          </div>
-
-          <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
-            <TextField
-              label="Data Type Length"
-              value={tempColumn.typeLength}
-              onChange={handleColumnTypeLengthChange}
-              size="small"
-              sx={{ flex: 1 }}
-            />
-          </div>
-
-          <div style={{ display: "flex", flexWrap: "wrap" }}>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={tempColumn.nullable}
-                  onChange={handleColumnNullableChange}
-                  disabled={tempColumn.primaryKey} // Primary keys can't be nullable
-                />
-              }
-              label="Nullable"
-            />
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={tempColumn.unique}
-                  onChange={handleColumnUniqueChange}
-                />
-              }
-              label="Unique"
-            />
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={tempColumn.primaryKey}
-                  onChange={handleColumnPrimaryKeyChange}
-                  disabled={newTable.primaryKey && !tempColumn.primaryKey} // Disable if another column is already PK
-                />
-              }
-              label={
-                <span>
-                  Primary Key
-                  {newTable.primaryKey && !tempColumn.primaryKey && (
-                    <Typography
-                      variant="caption"
-                      sx={{ ml: 1, color: "text.secondary" }}
-                    >
-                      (Already set to: {newTable.primaryKey})
-                    </Typography>
-                  )}
-                </span>
-              }
-            />
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={tempColumn.foreignKey}
-                  onChange={handleColumnForeignKeyChange}
-                />
-              }
-              label="Foreign Key"
-            />
-
-            {tempColumn.foreignKey && (
-              <div
-                style={{
-                  display: "flex",
-                  gap: "10px",
-                  marginTop: "10px",
-                  marginBottom: "10px",
-                  width: "100%",
-                }}
-              >
-                <FormControl size="small" sx={{ flex: 1 }}>
-                  <InputLabel>References Table</InputLabel>
-                  <Select
-                    value={tempColumn.references.tableId}
-                    label="References Table"
-                    onChange={handleReferenceTableChange}
-                  >
-                    {tables.map((table) => (
-                      <MenuItem key={table.id} value={table.id}>
-                        {table.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-
-                {tempColumn.references.tableId && (
-                  <FormControl size="small" sx={{ flex: 1 }}>
-                    <InputLabel>References Column</InputLabel>
-                    <Select
-                      value={tempColumn.references.columnName}
-                      label="References Column"
-                      onChange={handleReferenceColumnChange}
-                    >
-                      {tables
-                        .find((t) => t.id === tempColumn.references.tableId)
-                        ?.columns.map((column) => (
-                          <MenuItem key={column.name} value={column.name}>
-                            {column.name} {column.primaryKey ? "(PK)" : ""}
-                          </MenuItem>
-                        ))}
-                    </Select>
-                  </FormControl>
-                )}
-              </div>
-            )}
-          </div>
-          <Button
-            variant="outlined"
-            onClick={addColumn}
-            sx={{ mt: 1 }}
-            disabled={!tempColumn.name || !tempColumn.type}
-          >
-            Add Column
-          </Button>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeDialog}>Cancel</Button>
-          <Button
-            onClick={editingTableId ? handleUpdateTable : handleCreateTable}
-            color="primary"
-            disabled={!newTable.name}
-          >
-            {editingTableId ? "Update Table" : "Create Table"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <TableDialog
+        isOpen={tableDialogOpen}
+        handleClose={handleCloseTableDialog}
+        tables={tables}
+        tempTableId={tempTableId}
+        tempTable={tempTable}
+        setTempTable={setTempTable}
+        handleUpdateTable={handleUpdateTable}
+        handleCreateTable={handleCreateTable}
+        tempColumns={tempColumns}
+        setTempColumns={setTempColumns}
+        handleAddColumn={addColumn}
+        handleColumnChange={handleTempColumnChange}
+        handleRemoveColumn={handleTempRemoveColumn}
+        handleTableDialogSubmit={handleTableDialogSubmit}
+      />
 
       {/* SQL Export Dialog */}
       <Dialog

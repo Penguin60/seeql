@@ -8,4 +8,10 @@
     padding-right: 20px;
     border-radius: 4px;
     z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.5s;
+    pointer-events: none;
+}
+.canvasStats.visible {
+    opacity: 1;
 }
