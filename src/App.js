@@ -8,26 +8,23 @@ import {
   Button,
   TextField,
   Fab,
-  IconButton,
-  List,
-  ListItem,
-  ListItemText,
-  FormControlLabel,
-  Checkbox,
-  Typography,
-  Divider,
   Select,
   MenuItem,
   FormControl,
-  InputLabel
+  InputLabel,
+  ButtonGroup,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
-import DeleteIcon from "@mui/icons-material/Delete";
+import { MyLocation } from "@mui/icons-material";
 import TrashIcon from "@mui/icons-material/Delete";
 import CanvasStatistics from "./Components/CanvasStatistics";
 import { Add } from "@mui/icons-material";
 import TableDialog from "./Components/TableDialog";
-import { convertToDrizzle, convertToPrisma, convertToSpring } from "./Components/ConvertToCode";
+import {
+  convertToDrizzle,
+  convertToPrisma,
+  convertToSpring,
+} from "./Components/ConvertToCode";
 
 function App() {
   document.body.style.overflow = "hidden";
@@ -230,49 +227,50 @@ function App() {
   const [yourTextState, setYourTextState] = useState("");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
 
-  const callGemeniAPI = () => {
-    
-  }
+  const callGemeniAPI = () => {};
 
   const importSQLDialog = () => {
     return (
       <Dialog
-      open={importDialogOpen}
-      onClose={() => setImportDialogOpen(false)}
-      maxWidth="sm"
-      fullWidth
-    >
-      <DialogTitle>Import SQL</DialogTitle>
-      <DialogContent>
-        <TextField
-          label="Import SQL"
-          variant="outlined"
-          fullWidth
-          multiline
-          minRows={6}
-          value={yourTextState}
-          onChange={(e) => setYourTextState(e.target.value)}
-        />
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={() => setImportDialogOpen(false)}>Cancel</Button>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={() => {
-            handleTextSubmit();
-            setImportDialogOpen(false);
-          }}
-        > Submit </Button>
-      </DialogActions>
+        open={importDialogOpen}
+        onClose={() => setImportDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Import SQL</DialogTitle>
+        <DialogContent>
+          <TextField
+            label="Import SQL"
+            variant="outlined"
+            fullWidth
+            multiline
+            minRows={6}
+            value={yourTextState}
+            onChange={(e) => setYourTextState(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setImportDialogOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => {
+              handleTextSubmit();
+              setImportDialogOpen(false);
+            }}
+          >
+            {" "}
+            Submit{" "}
+          </Button>
+        </DialogActions>
       </Dialog>
     );
-  }
+  };
 
   const handleTextSubmit = () => {
     const tablesFromSQL = generateTablesFromSQL(yourTextState);
     setTables(tablesFromSQL);
-  }
+  };
 
   const handleCreateTable = (newTable) => {
     if (newTable.name) {
@@ -387,15 +385,19 @@ function App() {
         );
 
         const trashRect = document
-        .querySelector('[aria-label="delete table"]')
-        .getBoundingClientRect();
-        if(e.clientX >= trashRect.left && e.clientX <= trashRect.right && e.clientY >= trashRect.top && e.clientY <= trashRect.bottom) {
+          .querySelector('[aria-label="delete table"]')
+          .getBoundingClientRect();
+        if (
+          e.clientX >= trashRect.left &&
+          e.clientX <= trashRect.right &&
+          e.clientY >= trashRect.top &&
+          e.clientY <= trashRect.bottom
+        ) {
           setIsOverTrash(true);
           console.log("over trash");
         } else {
           setIsOverTrash(false);
         }
-        
       };
 
       // Document-level mouse up handler
@@ -440,15 +442,19 @@ function App() {
         );
 
         const trashRect = document
-        .querySelector('[aria-label="delete table"]')
-        .getBoundingClientRect();
-        if(e.clientX >= trashRect.left && e.clientX <= trashRect.right && e.clientY >= trashRect.top && e.clientY <= trashRect.bottom) {
+          .querySelector('[aria-label="delete table"]')
+          .getBoundingClientRect();
+        if (
+          e.clientX >= trashRect.left &&
+          e.clientX <= trashRect.right &&
+          e.clientY >= trashRect.top &&
+          e.clientY <= trashRect.bottom
+        ) {
           setIsOverTrash(true);
           console.log("over trash");
         } else {
           setIsOverTrash(false);
         }
-        
       };
 
       // Document-level mouse up handler
@@ -511,110 +517,116 @@ function App() {
     // setDraggedTable(null);
   };
 
-/**
- * Parses CREATE TABLE SQL and extracts columns with:
- * name, type, typeLength, nullable, unique, primaryKey, foreignKey, references
- */
-const generateTablesFromSQL = (sql) => {
-  const tableRegex = /CREATE\s+TABLE\s+([a-zA-Z0-9_]+)\s*\(([^;]*?)\);/gi;
-  const columnLineRegex = /^\s*([a-zA-Z0-9_]+)\s+([a-zA-Z0-9_]+)(?:\((\d+)\))?([\s\S]*)$/m;
-  const pkRegex = /PRIMARY\s+KEY/i;
-  const uniqueRegex = /UNIQUE/i;
-  const notNullRegex = /NOT\s+NULL/i;
-  const fkRegex = /FOREIGN\s+KEY\s*\(([^)]+)\)\s*REFERENCES\s+([a-zA-Z0-9_]+)\s*\(([^)]+)\)/i;
+  /**
+   * Parses CREATE TABLE SQL and extracts columns with:
+   * name, type, typeLength, nullable, unique, primaryKey, foreignKey, references
+   */
+  const generateTablesFromSQL = (sql) => {
+    const tableRegex = /CREATE\s+TABLE\s+([a-zA-Z0-9_]+)\s*\(([^;]*?)\);/gi;
+    const columnLineRegex =
+      /^\s*([a-zA-Z0-9_]+)\s+([a-zA-Z0-9_]+)(?:\((\d+)\))?([\s\S]*)$/m;
+    const pkRegex = /PRIMARY\s+KEY/i;
+    const uniqueRegex = /UNIQUE/i;
+    const notNullRegex = /NOT\s+NULL/i;
+    const fkRegex =
+      /FOREIGN\s+KEY\s*\(([^)]+)\)\s*REFERENCES\s+([a-zA-Z0-9_]+)\s*\(([^)]+)\)/i;
 
-  let match;
-  const tablesArr = [];
+    let match;
+    const tablesArr = [];
 
-  // First pass: parse tables and columns
-  while ((match = tableRegex.exec(sql)) !== null) {
-    const [, tableName, columnsBlock] = match;
-    const columnsLines = columnsBlock.split(/,(?![^()]*\))/).map(line => line.trim());
-    const columns = [];
-    const foreignKeys = [];
+    // First pass: parse tables and columns
+    while ((match = tableRegex.exec(sql)) !== null) {
+      const [, tableName, columnsBlock] = match;
+      const columnsLines = columnsBlock
+        .split(/,(?![^()]*\))/)
+        .map((line) => line.trim());
+      const columns = [];
+      const foreignKeys = [];
 
-    columnsLines.forEach((line) => {
-      // Handle table-level foreign key constraints
-      const fkMatch = fkRegex.exec(line);
-      if (fkMatch) {
-        foreignKeys.push({
-          columnName: fkMatch[1].trim(),
-          references: {
-            table: fkMatch[2].trim(),
-            column: fkMatch[3].trim(),
-          },
-        });
-        return;
-      }
-
-      // Handle regular column definitions
-      const colMatch = columnLineRegex.exec(line);
-      if (colMatch) {
-        columns.push({
-          name: colMatch[1],
-          type: colMatch[2].toLowerCase(), // Store type as lowercase
-          typeLength: colMatch[3] || "",
-          nullable: !notNullRegex.test(line),
-          unique: uniqueRegex.test(line),
-          primaryKey: pkRegex.test(line),
-          foreignKey: false, // will be set below if matched
-          references: { tableId: "", columnName: "" },
-        });
-      }
-    });
-
-    // Attach foreign key info to columns (table name for now)
-    foreignKeys.forEach((fk) => {
-      const col = columns.find(c => c.name === fk.columnName);
-      if (col) {
-        col.foreignKey = true;
-        col.references = {
-          tableId: fk.references.table, // will resolve to id later
-          columnName: fk.references.column,
-        };
-      }
-    });
-
-    tablesArr.push({
-      id: `table-${Date.now()}-${Math.random()}`,
-      name: tableName,
-      notes: "",
-      columns,
-      primaryKey: columns.find((c) => c.primaryKey)?.name || null,
-      foreignKeys,
-      position: { x: 100, y: 100 },
-    });
-  }
-
-  // Second pass: resolve references.tableId from table name to table id
-  tablesArr.forEach((table) => {
-    table.columns.forEach((col) => {
-      if (col.foreignKey && col.references.tableId) {
-        const refTable = tablesArr.find(t => t.name === col.references.tableId);
-        if (refTable) {
-          col.references.tableId = refTable.id;
-        } else {
-          col.references.tableId = ""; // fallback if not found
+      columnsLines.forEach((line) => {
+        // Handle table-level foreign key constraints
+        const fkMatch = fkRegex.exec(line);
+        if (fkMatch) {
+          foreignKeys.push({
+            columnName: fkMatch[1].trim(),
+            references: {
+              table: fkMatch[2].trim(),
+              column: fkMatch[3].trim(),
+            },
+          });
+          return;
         }
-      }
-    });
-  });
 
-  return tablesArr;
-};
+        // Handle regular column definitions
+        const colMatch = columnLineRegex.exec(line);
+        if (colMatch) {
+          columns.push({
+            name: colMatch[1],
+            type: colMatch[2].toLowerCase(), // Store type as lowercase
+            typeLength: colMatch[3] || "",
+            nullable: !notNullRegex.test(line),
+            unique: uniqueRegex.test(line),
+            primaryKey: pkRegex.test(line),
+            foreignKey: false, // will be set below if matched
+            references: { tableId: "", columnName: "" },
+          });
+        }
+      });
+
+      // Attach foreign key info to columns (table name for now)
+      foreignKeys.forEach((fk) => {
+        const col = columns.find((c) => c.name === fk.columnName);
+        if (col) {
+          col.foreignKey = true;
+          col.references = {
+            tableId: fk.references.table, // will resolve to id later
+            columnName: fk.references.column,
+          };
+        }
+      });
+
+      tablesArr.push({
+        id: `table-${Date.now()}-${Math.random()}`,
+        name: tableName,
+        notes: "",
+        columns,
+        primaryKey: columns.find((c) => c.primaryKey)?.name || null,
+        foreignKeys,
+        position: { x: 100, y: 100 },
+      });
+    }
+
+    // Second pass: resolve references.tableId from table name to table id
+    tablesArr.forEach((table) => {
+      table.columns.forEach((col) => {
+        if (col.foreignKey && col.references.tableId) {
+          const refTable = tablesArr.find(
+            (t) => t.name === col.references.tableId
+          );
+          if (refTable) {
+            col.references.tableId = refTable.id;
+          } else {
+            col.references.tableId = ""; // fallback if not found
+          }
+        }
+      });
+    });
+
+    return tablesArr;
+  };
 
   const handleFormatChange = (e) => {
     const format = e.target.value;
     setSqlCodeType(format);
     let generatedCode = "";
-    if(format === "SQL") {
+    if (format === "SQL") {
       generatedCode += `-- ${format} schema generated by SeeQL\n`;
       generatedCode += `-- Generated on ${new Date().toLocaleString()}\n\n`;
     } else {
       generatedCode += `// ${format} schema generated by SeeQL\n`;
       generatedCode += `// Generated on ${new Date().toLocaleString()}\n\n`;
     }
-    switch(format) {
+    switch (format) {
       case "Drizzle":
         generatedCode += convertToDrizzle(tables);
         break;
@@ -629,7 +641,7 @@ const generateTablesFromSQL = (sql) => {
         generatedCode += generateSQL(tables);
     }
     setSqlCode(generatedCode);
-  }
+  };
   // no idea wtf is going on here
   const generateSQL = () => {
     let sql = "";
@@ -1018,58 +1030,80 @@ const generateTablesFromSQL = (sql) => {
         ))}
       </div>
 
-      {/* MUI Floating Action Button */}
-      <Fab
-        color="primary"
-        aria-label="add table"
-        style={{
-          position: "fixed",
-          bottom: "20px",
-          right: "20px",
-          zIndex: 1000,
-        }}
-        onClick={openNewTableDialog}
-      >
-        <AddIcon />
-      </Fab>
-
       {/* Show CanvasStatistics with fade-out */}
       <CanvasStatistics
         scale={scale}
         visible={Date.now() - lastZoomTime < STATS_FADE_OUT_TIME}
       />
-      <Fab
-        color="primary"
-        aria-label="delete table"
+
+      <div
         style={{
           position: "fixed",
           bottom: "20px",
-          left: "20px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          display: "flex",
+          alignItems: "center",
           zIndex: 1000,
-          background: isOverTrash ? "red" : "#3f51b5",
-          transition: "background 0.2s",
         }}
-        onMouseUp={() => {
-          if (draggedTable && isOverTrash) {
-            setTables((prevTables) =>
-              prevTables.filter((table) => table.id !== draggedTable)
-            );
-            setDraggedTable(null);
-            setIsOverTrash(false);
-          }
-        }}
-        onMouseEnter={() => {
-          if (draggedTable) setIsOverTrash(true);
-        }}
-        onMouseLeave={() => setIsOverTrash(false)}
+      >
+        <Button
+          variant="contained"
+          color={isOverTrash ? "error" : "primary"}
+          aria-label="delete table"
+          style={{
+            transition: "background 0.2s",
+            borderRadius: "4px 0 0 4px",
+            background: "#141414",
+            color: "white",
+          }}
+          onMouseUp={() => {
+            if (draggedTable && isOverTrash) {
+              setTables((prevTables) =>
+                prevTables.filter((table) => table.id !== draggedTable)
+              );
+              setDraggedTable(null);
+              setIsOverTrash(false);
+            }
+          }}
+          onMouseEnter={() => {
+            if (draggedTable) setIsOverTrash(true);
+          }}
+          onMouseLeave={() => setIsOverTrash(false)}
         >
           <TrashIcon />
-        </Fab>
+        </Button>
 
-      {Date.now() - lastZoomTime < 2000 && <CanvasStatistics scale={scale}/>}
-      <button className="resetCanvasButton" onClick={handleResetCanvasPos}>
-        Reset Position
-      </button>
+        <Fab
+          color="primary"
+          aria-label="add table"
+          style={{
+            zIndex: 1001,
+            width: "64px",
+            height: "64px",
+            margin: "0 -8px",
+            background: "black",
+            color: "white",
+          }}
+          onClick={openNewTableDialog}
+        >
+          <AddIcon style={{ fontSize: "32px" }} />
+        </Fab>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleResetCanvasPos}
+          style={{
+            borderRadius: "0 4px 4px 0",
+            background: "#141414",
+            color: "white",
+          }}
+        >
+          <MyLocation />
+        </Button>
+      </div>
+
+      {Date.now() - lastZoomTime < 2000 && <CanvasStatistics scale={scale} />}
 
       <TableDialog
         isOpen={tableDialogOpen}
@@ -1088,7 +1122,6 @@ const generateTablesFromSQL = (sql) => {
         handleTableDialogSubmit={handleTableDialogSubmit}
       />
 
-      {/* SQL Export Dialog */}
       <Dialog
         open={sqlDialogOpen}
         onClose={closeSQLDialog}
@@ -1098,7 +1131,9 @@ const generateTablesFromSQL = (sql) => {
         <DialogTitle>Exported SQL Schema</DialogTitle>
         <DialogContent sx={{ pt: 2, pb: 0 }}>
           <FormControl fullWidth sx={{ mt: 1, mb: 2 }}>
-            <InputLabel id="formatSelectorLabel" sx={{}}>Format</InputLabel>
+            <InputLabel id="formatSelectorLabel" sx={{}}>
+              Format
+            </InputLabel>
             <Select
               labelId="formatSelectorLabel"
               value={sqlCodeType}
@@ -1131,7 +1166,7 @@ const generateTablesFromSQL = (sql) => {
               callGemeniAPI();
             }}
             sx={{ mt: 2 }}
-            ></Button>
+          ></Button>
         </DialogContent>
         <DialogActions>
           <Button onClick={closeSQLDialog}>Close</Button>
@@ -1154,26 +1189,26 @@ const generateTablesFromSQL = (sql) => {
         >
           Export SQL
         </Button>
-      <div
-        style={{
-          position: "fixed",
-          top: "1.78%",
-          left: "10%",
-          zIndex: 1000,
-        }}
-      >
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={() => setImportDialogOpen(true)}
-          fullWidth
+        <div
+          style={{
+            position: "fixed",
+            top: "1.78%",
+            left: "10%",
+            zIndex: 1000,
+          }}
         >
-          Import SQL
-        </Button>
-        {importSQLDialog()}
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => setImportDialogOpen(true)}
+            fullWidth
+          >
+            Import SQL
+          </Button>
+          {importSQLDialog()}
+        </div>
       </div>
     </div>
-  </div>
   );
 }
 
