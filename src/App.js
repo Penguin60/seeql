@@ -401,6 +401,25 @@ const handleTableMouseDown = (e, tableId) => {
         columnDefinitions.push(`  PRIMARY KEY (${table.primaryKey})`);
       }
 
+      table.columns.forEach((column) => {
+        if (
+          column.foreignKey &&
+          column.references &&
+          column.references.tableId &&
+          column.references.columnName
+        ) {
+          // Find the referenced table's name
+          const refTable = tables.find(
+            (t) => t.id === column.references.tableId
+          );
+          if (refTable) {
+            columnDefinitions.push(
+              `  FOREIGN KEY (${column.name}) REFERENCES ${refTable.name}(${column.references.columnName})`
+            );
+          }
+        }
+      });
+
       // Join all column definitions with commas
       sql += columnDefinitions.join(",\n");
 
