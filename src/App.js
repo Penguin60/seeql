@@ -47,6 +47,7 @@ function App() {
 
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingTableId, setEditingTableId] = useState(null);
   const [newTable, setNewTable] = useState({
     name: "",
     notes: "",
@@ -75,24 +76,126 @@ function App() {
   const [sqlDialogOpen, setSqlDialogOpen] = useState(false);
   const [sqlCode, setSqlCode] = useState("");
 
+  const handleTableDoubleClick = (e, tableId) => {
+    e.stopPropagation();
+    resetFormFields();
+    const tableEdit = tables.find(t => t.id === tableId);
+    if(!tableEdit) return;
+
+    setNewTable({
+        ...tableEdit,
+    });
+    setEditingTableId(tableId);
+    setDialogOpen(true);
+  }
+
+  const handleUpdateTable = () => {
+  if (newTable.name) {
+    // If there's data in the temp column fields, add it before updating
+    let finalColumns = [...newTable.columns];
+    let finalPrimaryKey = newTable.primaryKey;
+
+    if (tempColumn.name && tempColumn.type) {
+      finalColumns = [...finalColumns, { ...tempColumn }];
+      if (tempColumn.primaryKey) {
+        finalPrimaryKey = tempColumn.name;
+      }
+    }
+
+    // Find the original table to compare columns
+    const originalTable = tables.find(t => t.id === editingTableId);
+    
+    // Find removed columns by comparing original with updated columns
+    const removedColumns = originalTable.columns.filter(
+      origCol => !finalColumns.some(newCol => newCol.name === origCol.name)
+    );
+    
+    // Create a copy of tables to update
+    let updatedTables = [...tables];
+    
+    // Process cascade deletion for removed columns
+    // Replace the existing updateReferences function in handleUpdateTable
+
+// Process cascade deletion for removed columns
+if (removedColumns.length > 0) {
+  // Track processed columns to avoid duplicates
+  const processedPairs = new Set();
+  
+  // Function to update direct references only
+  const updateReferences = (tableId, columnName) => {
+    // Find the original column's properties before it's removed
+    const originalColumn = originalTable.columns.find(col => col.name === columnName);
+    if (!originalColumn) return;
+    
+    // Prevent duplicate processing
+    const pairKey = `${tableId}-${columnName}`;
+    if (processedPairs.has(pairKey)) return;
+    processedPairs.add(pairKey);
+    
+    // Update all tables with direct references to this column
+    updatedTables = updatedTables.map(table => {
+      // Skip the table being edited
+      if (table.id === editingTableId) return table;
+      
+      const updatedColumns = table.columns.map(column => {
+        if (column.foreignKey && 
+            column.references && 
+            column.references.tableId === tableId && 
+            column.references.columnName === columnName) {
+          
+          // Convert foreign key to a standalone column with inherited properties
+          return {
+            ...column,
+            // Copy properties from the original column
+            nullable: originalColumn.nullable,
+            unique: true, // Make it unique
+            foreignKey: false, // Remove foreign key status
+            references: { tableId: "", columnName: "" }
+          };
+        }
+        return column;
+      });
+      
+      return { ...table, columns: updatedColumns };
+    });
+  };
+  
+  // Process each removed column
+  removedColumns.forEach(column => {
+    updateReferences(editingTableId, column.name);
+  });
+}
+    // Update the edited table itself
+    updatedTables = updatedTables.map(table => 
+      table.id === editingTableId 
+        ? { 
+            ...table, 
+            name: newTable.name,
+            notes: newTable.notes,
+            columns: finalColumns,
+            primaryKey: finalPrimaryKey
+          } 
+        : table
+    );
+    
+    setTables(updatedTables);
+    setDialogOpen(false);
+    resetFormFields();
+  }
+};
+
   const handleResetCanvasPos = () => {
     setPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
     setScale(1);
   };
 
   const openNewTableDialog = () => {
-    setNewTable({
-      name: "",
-      notes: "",
-      columns: [],
-      primaryKey: null,
-      foreignKeys: [],
-      position: { x: 100, y: 100 },
-    });
+    resetFormFields();
     setDialogOpen(true);
   };
 
   const closeDialog = () => {
+    resetFormFields();
     setDialogOpen(false);
   };
 
@@ -137,6 +240,36 @@ function App() {
     });
   };
 
+  const resetFormFields = () => {
+    // Reset main table form
+    setNewTable({
+        name: "",
+        notes: "",
+        columns: [],
+        primaryKey: null,
+        foreignKeys: [],
+        position: { x: 100, y: 100 },
+    });
+    
+    // Reset temp column form
+    setTempColumn({
+        name: "",
+        type: "",
+        typeLength: "",
+        nullable: true,
+        unique: false,
+        primaryKey: false,
+        foreignKey: false,
+        references: {
+        tableId: "",
+        columnName: "",
+        },
+    });
+    
+// Reset editing state
+setEditingTableId(null);
+};
+
   const handleReferenceTableChange = (e) => {
     setTempColumn({
       ...tempColumn,
@@ -147,16 +280,40 @@ function App() {
       },
     });
   };
-
-  const handleReferenceColumnChange = (e) => {
-    setTempColumn({
-      ...tempColumn,
-      references: {
-        ...tempColumn.references,
-        columnName: e.target.value,
-      },
-    });
-  };
+    const handleReferenceColumnChange = (e) => {
+        const selectedColumnName = e.target.value;
+        const referencedTable = tables.find(t => t.id === tempColumn.references.tableId);
+        const referencedColumn = referencedTable?.columns.find(c => c.name === selectedColumnName);
+        
+        // Copy properties from the referenced column
+        if (referencedColumn) {
+            // Generate a suggested name (tableName_columnName format)
+            const suggestedName = tempColumn.name || 
+            `${selectedColumnName}`;
+            
+            setTempColumn({
+            ...tempColumn,
+            // Auto-populate name if it's empty
+            name: tempColumn.name || suggestedName,
+            // Copy type from referenced column
+            type: referencedColumn.type,
+            typeLength: referencedColumn.typeLength || "",
+            references: {
+                ...tempColumn.references,
+                columnName: selectedColumnName
+            }
+            });
+        } else {
+            // Just update the reference if column not found
+            setTempColumn({
+            ...tempColumn,
+            references: {
+                ...tempColumn.references,
+                columnName: selectedColumnName
+            }
+            });
+        }
+    };
 
   const handleColumnPrimaryKeyChange = (e) => {
     const isPrimaryKey = e.target.checked;
@@ -252,6 +409,7 @@ function App() {
         },
       ]);
       setDialogOpen(false);
+      resetFormFields();
     }
   };
 
@@ -674,6 +832,7 @@ const handleTableMouseDown = (e, tableId) => {
                 cursor: "move" // Add move cursor
             }}
             onMouseDown={(e) => handleTableMouseDown(e, table.id)}
+            onDoubleClick={(e) => handleTableDoubleClick(e, table.id)}
             >
             <div className="table-component-header">
               {table.name || "Unnamed Table"}
@@ -929,11 +1088,11 @@ const handleTableMouseDown = (e, tableId) => {
         <DialogActions>
           <Button onClick={closeDialog}>Cancel</Button>
           <Button
-            onClick={handleCreateTable}
+            onClick={editingTableId ? handleUpdateTable : handleCreateTable}
             color="primary"
             disabled={!newTable.name}
           >
-            Create Table
+            {editingTableId ? "Update Table" : "Create Table"}
           </Button>
         </DialogActions>
       </Dialog>
