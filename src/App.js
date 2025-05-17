@@ -11,26 +11,37 @@ function App() {
   const [scale, setScale] = useState(1);
   const [startPanPosition, setStartPanPosition] = useState({ x: 0, y: 0 });
   
+  // Table dragging state
+  const [draggedTable, setDraggedTable] = useState(null);
+  const [startDragPosition, setStartDragPosition] = useState({ x: 0, y: 0 });
+  
   // array to hold instances of generated tables
   const [tables, setTables] = useState([]);
 
   const handleResetCanvasPos = () => {
-      setPosition({ x: 0, y: 0 });
-      setScale(1);
+    setPosition({ x: 0, y: 0 });
+    setScale(1);
   };
 
   const handleAddTable = () => {
     const newTableId = `table-${Date.now()}`;
-    setTables([...tables, { id: newTableId }]);
+    // Add position information when creating a new table
+    setTables([...tables, { 
+      id: newTableId,
+      position: { x: 100, y: 100 } // Default position
+    }]);
   };
 
   // mouse down for panning handler
   const handleMouseDown = (e) => {
-    setIsPanning(true);
-    setStartPanPosition({
-      x: e.clientX - position.x,
-      y: e.clientY - position.y
-    });
+    // Only pan if we're not on a table
+    if (!draggedTable) {
+      setIsPanning(true);
+      setStartPanPosition({
+        x: e.clientX - position.x,
+        y: e.clientY - position.y
+      });
+    }
   };
 
   // mouse move for panning handler
@@ -46,6 +57,47 @@ function App() {
   // mouse up for panning handler
   const handleMouseUp = () => {
     setIsPanning(false);
+  };
+
+  // Table dragging handlers
+  const handleTableMouseDown = (e, tableId) => {
+    e.stopPropagation(); // Prevent canvas panning
+    setDraggedTable(tableId);
+    setStartDragPosition({
+      x: e.clientX,
+      y: e.clientY
+    });
+  };
+
+  const handleTableMouseMove = (e) => {
+    if (draggedTable) {
+      e.stopPropagation(); // Prevent canvas panning
+      
+      const deltaX = (e.clientX - startDragPosition.x) / scale;
+      const deltaY = (e.clientY - startDragPosition.y) / scale;
+      
+      setTables(prevTables => prevTables.map(table => {
+        if (table.id === draggedTable) {
+          return {
+            ...table,
+            position: {
+              x: table.position.x + deltaX,
+              y: table.position.y + deltaY
+            }
+          };
+        }
+        return table;
+      }));
+      
+      setStartDragPosition({
+        x: e.clientX,
+        y: e.clientY
+      });
+    }
+  };
+
+  const handleTableMouseUp = () => {
+    setDraggedTable(null);
   };
 
   // scroll wheel zoom handler
@@ -70,6 +122,7 @@ function App() {
   // cursor exit handler
   const handleMouseLeave = () => {
     setIsPanning(false);
+    setDraggedTable(null);
   };
   
   // scroll event listener (prevents default scrolling)
@@ -135,25 +188,39 @@ function App() {
         height={window.innerHeight}
       />
       <div 
-      className="tables-area"
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
-        transformOrigin: '0 0'
-      }}
-    >
-      {tables.map(table => (
-        <div key={table.id} className="tableComponent">
-          <div className="tablePlaceholder">
-            SQL Table Schema (To be implemented)
+        className="tables-area"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+          transformOrigin: '0 0',
+          pointerEvents: 'none' // Allow clicks to pass through to canvas by default
+        }}
+        onMouseMove={handleTableMouseMove}
+        onMouseUp={handleTableMouseUp}
+        onMouseLeave={handleTableMouseUp}
+      >
+        {tables.map(table => (
+          <div 
+            key={table.id} 
+            className="table-component"
+            style={{
+              left: `${table.position.x}px`,
+              top: `${table.position.y}px`,
+              pointerEvents: 'auto' // Make tables interactive
+            }}
+            onMouseDown={(e) => handleTableMouseDown(e, table.id)}
+          >
+            <div className="table-component-header">Table</div>
+            <div className="table-placeholder">
+              SQL Table Schema (To be implemented)
+            </div>
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
       <AddNewTable onAddTable={handleAddTable}/>
       <CanvasStatistics scale={scale} />
       <button 
