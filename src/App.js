@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import "./App.css";
 import {
+  Alert,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -12,8 +13,9 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  ButtonGroup,
+  IconButton
 } from "@mui/material";
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import AddIcon from "@mui/icons-material/Add";
 import { MyLocation } from "@mui/icons-material";
 import TrashIcon from "@mui/icons-material/Delete";
@@ -72,6 +74,8 @@ function App() {
   const [sqlDialogOpen, setSqlDialogOpen] = useState(false);
   const [sqlCode, setSqlCode] = useState("");
   const [sqlCodeType, setSqlCodeType] = useState("SQL");
+
+  const [copyStatus, setCopyStatus] = useState(0);
 
   const handleTableDoubleClick = (e, tableId) => {
     e.stopPropagation();
@@ -136,7 +140,7 @@ function App() {
     );
   };
 
-  const handleTempColumnRemove = (index) => {
+  const handleTempRemoveColumn = (index) => {
     setTempColumns((cols) => cols.filter((_, i) => i !== index));
   };
 
@@ -721,6 +725,23 @@ function App() {
     setTableDialogOpen(false);
   };
 
+  const handleCopyToClipboard = () => {
+    navigator.clipboard.writeText(sqlCode)
+    .then(() => {
+      setCopyStatus(1);
+      setTimeout(() => {
+        setCopyStatus(0);
+      }, 2500);
+    })
+    .catch((err) => {
+      console.error("Failed to copy: ", err);
+      setCopyStatus(-1);
+      setTimeout(() => {
+        setCopyStatus(0);
+      }, 2500);
+    });
+  }
+
   // scroll event listener (prevents default scrolling)
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -1118,7 +1139,7 @@ function App() {
         setTempColumns={setTempColumns}
         handleAddColumn={addColumn}
         handleColumnChange={handleTempColumnChange}
-        handleRemoveColumn={handleTempColumnRemove}
+        handleRemoveColumn={handleTempRemoveColumn}
         handleTableDialogSubmit={handleTableDialogSubmit}
       />
 
@@ -1158,7 +1179,6 @@ function App() {
             InputProps={{ readOnly: true }}
             sx={{ fontFamily: "monospace", fontSize: "1rem" }}
           />
-
           <Button
             variant="contained"
             color="primary"
@@ -1167,6 +1187,36 @@ function App() {
             }}
             sx={{ mt: 2 }}
           ></Button>
+          <IconButton 
+                  variant="contained"
+                  onClick={handleCopyToClipboard} 
+                  sx={{ 
+                    backgroundColor: 'black',
+                    color: 'white', 
+                    position: 'absolute',
+                    width: '40px',
+                    height: '40px',
+                    right: '29px',
+                    bottom:'105px',
+                    "&:hover": {
+                      backgroundColor: 'gray',
+                      color: 'black',
+                    }
+                    }}>
+            <ContentCopyIcon sx={{color: 'white'}}/>
+          </IconButton>
+          <Alert
+            severity={copyStatus === 1 ? "success" : copyStatus === -1 ? "error" : "info"}
+            sx={{
+              position: "absolute",
+              top: "10px",
+              right: "10px",
+              transition: "opacity 0.5s",
+              opacity: copyStatus === 0 ? 0 : 1,
+            }}
+          >
+            {copyStatus === 1 ? "Copied to clipboard!" : "Failed to copy"}
+          </Alert>
         </DialogContent>
         <DialogActions>
           <Button onClick={closeSQLDialog}>Close</Button>
