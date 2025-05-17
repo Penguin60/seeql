@@ -79,110 +79,114 @@ function App() {
   const handleTableDoubleClick = (e, tableId) => {
     e.stopPropagation();
     resetFormFields();
-    const tableEdit = tables.find(t => t.id === tableId);
-    if(!tableEdit) return;
+    const tableEdit = tables.find((t) => t.id === tableId);
+    if (!tableEdit) return;
 
     setNewTable({
-        ...tableEdit,
+      ...tableEdit,
     });
     setEditingTableId(tableId);
     setDialogOpen(true);
-  }
+  };
 
   const handleUpdateTable = () => {
-  if (newTable.name) {
-    // If there's data in the temp column fields, add it before updating
-    let finalColumns = [...newTable.columns];
-    let finalPrimaryKey = newTable.primaryKey;
+    if (newTable.name) {
+      // If there's data in the temp column fields, add it before updating
+      let finalColumns = [...newTable.columns];
+      let finalPrimaryKey = newTable.primaryKey;
 
-    if (tempColumn.name && tempColumn.type) {
-      finalColumns = [...finalColumns, { ...tempColumn }];
-      if (tempColumn.primaryKey) {
-        finalPrimaryKey = tempColumn.name;
-      }
-    }
-
-    // Find the original table to compare columns
-    const originalTable = tables.find(t => t.id === editingTableId);
-    
-    // Find removed columns by comparing original with updated columns
-    const removedColumns = originalTable.columns.filter(
-      origCol => !finalColumns.some(newCol => newCol.name === origCol.name)
-    );
-    
-    // Create a copy of tables to update
-    let updatedTables = [...tables];
-    
-    // Process cascade deletion for removed columns
-    // Replace the existing updateReferences function in handleUpdateTable
-
-// Process cascade deletion for removed columns
-if (removedColumns.length > 0) {
-  // Track processed columns to avoid duplicates
-  const processedPairs = new Set();
-  
-  // Function to update direct references only
-  const updateReferences = (tableId, columnName) => {
-    // Find the original column's properties before it's removed
-    const originalColumn = originalTable.columns.find(col => col.name === columnName);
-    if (!originalColumn) return;
-    
-    // Prevent duplicate processing
-    const pairKey = `${tableId}-${columnName}`;
-    if (processedPairs.has(pairKey)) return;
-    processedPairs.add(pairKey);
-    
-    // Update all tables with direct references to this column
-    updatedTables = updatedTables.map(table => {
-      // Skip the table being edited
-      if (table.id === editingTableId) return table;
-      
-      const updatedColumns = table.columns.map(column => {
-        if (column.foreignKey && 
-            column.references && 
-            column.references.tableId === tableId && 
-            column.references.columnName === columnName) {
-          
-          // Convert foreign key to a standalone column with inherited properties
-          return {
-            ...column,
-            // Copy properties from the original column
-            nullable: originalColumn.nullable,
-            unique: true, // Make it unique
-            foreignKey: false, // Remove foreign key status
-            references: { tableId: "", columnName: "" }
-          };
+      if (tempColumn.name && tempColumn.type) {
+        finalColumns = [...finalColumns, { ...tempColumn }];
+        if (tempColumn.primaryKey) {
+          finalPrimaryKey = tempColumn.name;
         }
-        return column;
-      });
-      
-      return { ...table, columns: updatedColumns };
-    });
+      }
+
+      // Find the original table to compare columns
+      const originalTable = tables.find((t) => t.id === editingTableId);
+
+      // Find removed columns by comparing original with updated columns
+      const removedColumns = originalTable.columns.filter(
+        (origCol) =>
+          !finalColumns.some((newCol) => newCol.name === origCol.name)
+      );
+
+      // Create a copy of tables to update
+      let updatedTables = [...tables];
+
+      // Process cascade deletion for removed columns
+      // Replace the existing updateReferences function in handleUpdateTable
+
+      // Process cascade deletion for removed columns
+      if (removedColumns.length > 0) {
+        // Track processed columns to avoid duplicates
+        const processedPairs = new Set();
+
+        // Function to update direct references only
+        const updateReferences = (tableId, columnName) => {
+          // Find the original column's properties before it's removed
+          const originalColumn = originalTable.columns.find(
+            (col) => col.name === columnName
+          );
+          if (!originalColumn) return;
+
+          // Prevent duplicate processing
+          const pairKey = `${tableId}-${columnName}`;
+          if (processedPairs.has(pairKey)) return;
+          processedPairs.add(pairKey);
+
+          // Update all tables with direct references to this column
+          updatedTables = updatedTables.map((table) => {
+            // Skip the table being edited
+            if (table.id === editingTableId) return table;
+
+            const updatedColumns = table.columns.map((column) => {
+              if (
+                column.foreignKey &&
+                column.references &&
+                column.references.tableId === tableId &&
+                column.references.columnName === columnName
+              ) {
+                // Convert foreign key to a standalone column with inherited properties
+                return {
+                  ...column,
+                  // Copy properties from the original column
+                  nullable: originalColumn.nullable,
+                  unique: true, // Make it unique
+                  foreignKey: false, // Remove foreign key status
+                  references: { tableId: "", columnName: "" },
+                };
+              }
+              return column;
+            });
+
+            return { ...table, columns: updatedColumns };
+          });
+        };
+
+        // Process each removed column
+        removedColumns.forEach((column) => {
+          updateReferences(editingTableId, column.name);
+        });
+      }
+      // Update the edited table itself
+      updatedTables = updatedTables.map((table) =>
+        table.id === editingTableId
+          ? {
+              ...table,
+              name: newTable.name,
+              notes: newTable.notes,
+              columns: finalColumns,
+              primaryKey: finalPrimaryKey,
+            }
+          : table
+      );
+
+      setTables(updatedTables);
+      setDialogOpen(false);
+      resetFormFields();
+    }
   };
-  
-  // Process each removed column
-  removedColumns.forEach(column => {
-    updateReferences(editingTableId, column.name);
-  });
-}
-    // Update the edited table itself
-    updatedTables = updatedTables.map(table => 
-      table.id === editingTableId 
-        ? { 
-            ...table, 
-            name: newTable.name,
-            notes: newTable.notes,
-            columns: finalColumns,
-            primaryKey: finalPrimaryKey
-          } 
-        : table
-    );
-    
-    setTables(updatedTables);
-    setDialogOpen(false);
-    resetFormFields();
-  }
-};
 
   const handleResetCanvasPos = () => {
     setPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
@@ -243,32 +247,32 @@ if (removedColumns.length > 0) {
   const resetFormFields = () => {
     // Reset main table form
     setNewTable({
-        name: "",
-        notes: "",
-        columns: [],
-        primaryKey: null,
-        foreignKeys: [],
-        position: { x: 100, y: 100 },
+      name: "",
+      notes: "",
+      columns: [],
+      primaryKey: null,
+      foreignKeys: [],
+      position: { x: 100, y: 100 },
     });
-    
+
     // Reset temp column form
     setTempColumn({
-        name: "",
-        type: "",
-        typeLength: "",
-        nullable: true,
-        unique: false,
-        primaryKey: false,
-        foreignKey: false,
-        references: {
+      name: "",
+      type: "",
+      typeLength: "",
+      nullable: true,
+      unique: false,
+      primaryKey: false,
+      foreignKey: false,
+      references: {
         tableId: "",
         columnName: "",
-        },
+      },
     });
-    
-// Reset editing state
-setEditingTableId(null);
-};
+
+    // Reset editing state
+    setEditingTableId(null);
+  };
 
   const handleReferenceTableChange = (e) => {
     setTempColumn({
@@ -280,40 +284,43 @@ setEditingTableId(null);
       },
     });
   };
-    const handleReferenceColumnChange = (e) => {
-        const selectedColumnName = e.target.value;
-        const referencedTable = tables.find(t => t.id === tempColumn.references.tableId);
-        const referencedColumn = referencedTable?.columns.find(c => c.name === selectedColumnName);
-        
-        // Copy properties from the referenced column
-        if (referencedColumn) {
-            // Generate a suggested name (tableName_columnName format)
-            const suggestedName = tempColumn.name || 
-            `${selectedColumnName}`;
-            
-            setTempColumn({
-            ...tempColumn,
-            // Auto-populate name if it's empty
-            name: tempColumn.name || suggestedName,
-            // Copy type from referenced column
-            type: referencedColumn.type,
-            typeLength: referencedColumn.typeLength || "",
-            references: {
-                ...tempColumn.references,
-                columnName: selectedColumnName
-            }
-            });
-        } else {
-            // Just update the reference if column not found
-            setTempColumn({
-            ...tempColumn,
-            references: {
-                ...tempColumn.references,
-                columnName: selectedColumnName
-            }
-            });
-        }
-    };
+  const handleReferenceColumnChange = (e) => {
+    const selectedColumnName = e.target.value;
+    const referencedTable = tables.find(
+      (t) => t.id === tempColumn.references.tableId
+    );
+    const referencedColumn = referencedTable?.columns.find(
+      (c) => c.name === selectedColumnName
+    );
+
+    // Copy properties from the referenced column
+    if (referencedColumn) {
+      // Generate a suggested name (tableName_columnName format)
+      const suggestedName = tempColumn.name || `${selectedColumnName}`;
+
+      setTempColumn({
+        ...tempColumn,
+        // Auto-populate name if it's empty
+        name: tempColumn.name || suggestedName,
+        // Copy type from referenced column
+        type: referencedColumn.type,
+        typeLength: referencedColumn.typeLength || "",
+        references: {
+          ...tempColumn.references,
+          columnName: selectedColumnName,
+        },
+      });
+    } else {
+      // Just update the reference if column not found
+      setTempColumn({
+        ...tempColumn,
+        references: {
+          ...tempColumn.references,
+          columnName: selectedColumnName,
+        },
+      });
+    }
+  };
 
   const handleColumnPrimaryKeyChange = (e) => {
     const isPrimaryKey = e.target.checked;
@@ -442,65 +449,65 @@ setEditingTableId(null);
 
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
-useEffect(() => {
-  // Only add document handlers when we're dragging a table
-  if (draggedTable) {
-    // Document-level mouse move handler for table dragging
-    const handleDocumentMouseMove = (e) => {
-      // Calculate the table position directly from cursor position
-      // maintaining the initial offset
-      const newX = (e.clientX - position.x) / scale - dragOffset.x;
-      const newY = (e.clientY - position.y) / scale - dragOffset.y;
-      
-      setTables(prevTables =>
-        prevTables.map(table => {
-          if (table.id === draggedTable) {
-            return {
-              ...table,
-              position: {
-                x: newX,
-                y: newY
-              }
-            };
-          }
-          return table;
-        })
-      );
-    };
-    
-    // Document-level mouse up handler
-    const handleDocumentMouseUp = () => {
-      setDraggedTable(null);
-    };
-    
-    // Add document-level event listeners
-    document.addEventListener('mousemove', handleDocumentMouseMove);
-    document.addEventListener('mouseup', handleDocumentMouseUp);
-    
-    // Clean up
-    return () => {
-      document.removeEventListener('mousemove', handleDocumentMouseMove);
-      document.removeEventListener('mouseup', handleDocumentMouseUp);
-    };
-  }
-}, [draggedTable, dragOffset, position, scale]);
+  useEffect(() => {
+    // Only add document handlers when we're dragging a table
+    if (draggedTable) {
+      // Document-level mouse move handler for table dragging
+      const handleDocumentMouseMove = (e) => {
+        // Calculate the table position directly from cursor position
+        // maintaining the initial offset
+        const newX = (e.clientX - position.x) / scale - dragOffset.x;
+        const newY = (e.clientY - position.y) / scale - dragOffset.y;
 
-// Add this function after your other handlers (around line 290)
-const handleTableMouseDown = (e, tableId) => {
-  e.stopPropagation(); // Prevent canvas panning
-  e.preventDefault(); // Prevent text selection
-  
-  // Find the table being dragged
-  const table = tables.find(t => t.id === tableId);
-  if (!table) return;
-  
-  // Calculate the offset between mouse position and table position
-  const offsetX = (e.clientX - position.x) / scale - table.position.x;
-  const offsetY = (e.clientY - position.y) / scale - table.position.y;
-  
-  setDragOffset({ x: offsetX, y: offsetY });
-  setDraggedTable(tableId);
-};
+        setTables((prevTables) =>
+          prevTables.map((table) => {
+            if (table.id === draggedTable) {
+              return {
+                ...table,
+                position: {
+                  x: newX,
+                  y: newY,
+                },
+              };
+            }
+            return table;
+          })
+        );
+      };
+
+      // Document-level mouse up handler
+      const handleDocumentMouseUp = () => {
+        setDraggedTable(null);
+      };
+
+      // Add document-level event listeners
+      document.addEventListener("mousemove", handleDocumentMouseMove);
+      document.addEventListener("mouseup", handleDocumentMouseUp);
+
+      // Clean up
+      return () => {
+        document.removeEventListener("mousemove", handleDocumentMouseMove);
+        document.removeEventListener("mouseup", handleDocumentMouseUp);
+      };
+    }
+  }, [draggedTable, dragOffset, position, scale]);
+
+  // Add this function after your other handlers (around line 290)
+  const handleTableMouseDown = (e, tableId) => {
+    e.stopPropagation(); // Prevent canvas panning
+    e.preventDefault(); // Prevent text selection
+
+    // Find the table being dragged
+    const table = tables.find((t) => t.id === tableId);
+    if (!table) return;
+
+    // Calculate the offset between mouse position and table position
+    const offsetX = (e.clientX - position.x) / scale - table.position.x;
+    const offsetY = (e.clientY - position.y) / scale - table.position.y;
+
+    setDragOffset({ x: offsetX, y: offsetY });
+    setDraggedTable(tableId);
+  };
   // scroll wheel zoom handler
   const handleWheel = (e) => {
     e.preventDefault();
@@ -651,8 +658,8 @@ const handleTableMouseDown = (e, tableId) => {
             // dimensions
             // TODO: Update to be dynamic or update with new ui
             const tableWidth = 215;
-            const headerHeight = 40;
-            const rowHeight = 125;
+            const headerHeight = 50;
+            const rowHeight = 30;
 
             const verticalOffset = 8;
 
@@ -745,29 +752,6 @@ const handleTableMouseDown = (e, tableId) => {
       });
     });
 
-    const renderShapes = true;
-
-    if (renderShapes) {
-      // blue square
-      ctx.fillStyle = "blue";
-      ctx.fillRect(100, 100, 50, 50);
-
-      // green circle
-      ctx.beginPath();
-      ctx.fillStyle = "green";
-      ctx.arc(-150, 150, 30, 0, Math.PI * 2);
-      ctx.fill();
-
-      // yellow triangle
-      ctx.beginPath();
-      ctx.fillStyle = "gold";
-      ctx.moveTo(-100, -100);
-      ctx.lineTo(-150, -200);
-      ctx.lineTo(-50, -200);
-      ctx.closePath();
-      ctx.fill();
-    }
-
     ctx.restore();
   }, [position, scale, tables]);
 
@@ -817,46 +801,88 @@ const handleTableMouseDown = (e, tableId) => {
         }}
       >
         {tables.map((table) => (
-          // Update the table div around line 560 to add the mousedown handler
-            <div
+          <div
             key={table.id}
             className="table-component"
             style={{
-                left: `${table.position.x}px`,
-                top: `${table.position.y}px`,
-                pointerEvents: "auto",
-                userSelect: "none",
-                WebkitUserSelect: "none",
-                MozUserSelect: "none",
-                msUserSelect: "none",
-                cursor: "move" // Add move cursor
+              left: `${table.position.x}px`,
+              top: `${table.position.y}px`,
+              pointerEvents: "auto",
+              userSelect: "none",
+              WebkitUserSelect: "none",
+              MozUserSelect: "none",
+              msUserSelect: "none",
+              cursor: "move",
             }}
             onMouseDown={(e) => handleTableMouseDown(e, table.id)}
             onDoubleClick={(e) => handleTableDoubleClick(e, table.id)}
-            >
-            <div className="table-component-header">
-              {table.name || "Unnamed Table"}
-            </div>
-            <div className="table-placeholder">
-              {table.columns.length > 0 ? (
-                <div className="table-columns">
-                  {table.columns.map((column, index) => (
-                    <div key={index} className="table-column">
-                      <strong>{column.name}</strong> ({column.type})
-                      {column.primaryKey && " 🔑"}
-                      {column.foreignKey && column.references?.tableID && " 🔗"}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                "No columns defined"
+          >
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th colSpan="2" className="table-component-header">
+                    {table.name || "Unnamed Table"}
+                  </th>
+                </tr>
+                {table.columns.length > 0 && (
+                  <tr className="column-headers">
+                    <th className="col-name">Name</th>
+                    <th className="col-type">Type</th>
+                    <th className="col-props">Properties</th>
+                  </tr>
+                )}
+              </thead>
+              <tbody className="table-body">
+                {table.columns.length > 0 ? (
+                  table.columns.map((column, index) => (
+                    <tr key={index} className="table-column">
+                      <td
+                        className={`col-name ${
+                          column.primaryKey ? "primary-key" : ""
+                        }`}
+                      >
+                        {column.name} {column.primaryKey && "🔑"}
+                      </td>
+                      <td className="col-type">
+                        {column.type}
+                        {column.typeLength ? `(${column.typeLength})` : ""}
+                      </td>
+                      <td className="col-props">
+                        {!column.nullable && (
+                          <span className="prop-item">NOT NULL</span>
+                        )}
+                        {column.unique && !column.primaryKey && (
+                          <span className="prop-item">UNIQUE</span>
+                        )}
+                        {column.foreignKey && column.references?.tableId && (
+                          <span className="foreign-key prop-item">
+                            {"🔗 "}
+                            {tables.find(
+                              (t) => t.id === column.references.tableId
+                            )?.name || ""}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="3" className="no-columns">
+                      No columns defined
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+              {table.notes && (
+                <tfoot>
+                  <tr>
+                    <td colSpan="3" className="table-notes">
+                      <small>{table.notes}</small>
+                    </td>
+                  </tr>
+                </tfoot>
               )}
-            </div>
-            {table.notes && (
-              <div className="table-notes">
-                <small>{table.notes}</small>
-              </div>
-            )}
+            </table>
           </div>
         ))}
       </div>
@@ -936,7 +962,7 @@ const handleTableMouseDown = (e, tableId) => {
                         }`
                       : ""
                   }`}
-                />                      
+                />
               </ListItem>
             ))}
           </List>

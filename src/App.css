@@ -51,39 +51,42 @@
 /* Individual table component */
 .table-component {
   position: absolute;
-  width: 200px;
+  min-width: 200px;
   background-color: white;
-  border: 2px solid #333;
   border-radius: 6px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   pointer-events: auto; /* Make the table interactive */
   margin: 10px;
   z-index: 20;
 }
 
-/* Table content placeholder */
-.table-placeholder {
-  padding: 15px;
-  min-height: 100px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  color: #666;
-  text-align: center;
-  background-color: #f9f9f9;
+.table-body {
+  padding: 10px;
   border-radius: 4px;
+  text-align: left;
+  background-color: #f9f9f9;
+}
+
+.table-body:hover {
+  transition: box-shadow 0.3s ease;
+  box-shadow: 0 4px 30px 0 rgba(0, 0, 0, 0.2);
+}
+
+.table-body td {
+  padding: 4px 8px;
+  font-size: 14px;
 }
 
 /* Optional table header */
 .table-component-header {
-  padding: 8px 12px;
-  background-color: #333;
+  padding: 4px 6px;
+  background-color: #000000;
   color: white;
-  border-top-left-radius: 4px;
+  border-top-left-radius: 3px;
   border-top-right-radius: 4px;
   font-weight: bold;
-  cursor: move; /* Indicates it can be dragged */
+  cursor: move;
+  width: 50%;
+  clip-path: polygon(0px 0, calc(100% - 10px) 0, 100% 100%, 0 100%);
 }
 
 .resetCanvasButton {
@@ -123,4 +126,56 @@
   font-size: 12px;
   border-top: 1px solid #eee;
   text-align: left;
+}
+
+.column-headers {
+  background-color: #f0f0f0;
+}
+
+.data-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.column-headers th {
+  padding: 4px 8px;
+  text-align: left;
+  font-size: 12px;
+  background-color: #e6e4e4;
+  border-right: none;
+}
+
+.column-headers th:last-child {
+  border-right: none;
+}
+
+.data-table .col-name {
+  width: 35%;
+}
+
+.data-table .col-type {
+  width: 30%;
+}
+
+.data-table .col-props {
+  width: auto;
+  white-space: nowrap;
+}
+
+.prop-item {
+  display: inline-block;
+  padding: 2px 5px;
+  margin-right: 4px;
+  background-color: #e6e4e4;
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+.foreign-key.prop-item {
+  background-color: #e3f2fd;
+}
+
+.table-body td {
+  padding: 6px 8px;
+  vertical-align: middle;
 }
