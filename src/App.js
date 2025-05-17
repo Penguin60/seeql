@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import './App.css';
 import AddNewTable from './Components/AddNewTable';
+import { buttonBaseClasses } from '@mui/material';
 import CanvasStatistics from './Components/CanvasStatistics';
 
 function App() {
@@ -12,6 +13,11 @@ function App() {
   
   // array to hold instances of generated tables
   const [tables, setTables] = useState([]);
+
+  const handleResetCanvasPos = () => {
+      setPosition({ x: 0, y: 0 });
+      setScale(1);
+  };
 
   const handleAddTable = () => {
     const newTableId = `table-${Date.now()}`;
@@ -141,8 +147,8 @@ function App() {
       }}
     >
       {tables.map(table => (
-        <div key={table.id} className="table-component">
-          <div className="table-placeholder">
+        <div key={table.id} className="tableComponent">
+          <div className="tablePlaceholder">
             SQL Table Schema (To be implemented)
           </div>
         </div>
@@ -150,6 +156,12 @@ function App() {
     </div>
       <AddNewTable onAddTable={handleAddTable}/>
       <CanvasStatistics scale={scale} />
+      <button 
+        className="resetCanvasButton"
+        onClick={handleResetCanvasPos}
+      >
+        Reset Position
+      </button>
     </div>
   );
 }

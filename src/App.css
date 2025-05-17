@@ -85,3 +85,21 @@
   font-weight: bold;
   cursor: move; /* Indicates it can be dragged */
 }
+
+.resetCanvasButton {
+  position: fixed;
+  bottom: 10px;
+  height: 50px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #ff4d4d;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.resetCanvasButton:hover {
+  background-color: #ff1a1a;
+}
