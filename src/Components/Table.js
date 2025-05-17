@@ -4,7 +4,7 @@ Table = {
     notes: null,
     name: '',
     columns: [],
-    primaryKey: [],
+    primaryKey: null,
     foreignKeys: []
 };
 
@@ -23,3 +23,5 @@ ForeignKey = {
     referenceTable: '',
     referenceColumn: ''
 }
+    // mouse move for dragging handler
+//   const handleTableMouseUp = () => {                                 

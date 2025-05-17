@@ -1,13 +1,32 @@
 import { useState, useRef, useEffect } from 'react';
 import './App.css';
-import AddNewTable from './Components/AddNewTable';
+import { 
+  Dialog, 
+  DialogTitle, 
+  DialogContent, 
+  DialogActions, 
+  Button, 
+  TextField, 
+  Fab,
+  IconButton,
+  List,
+  ListItem,
+  ListItemText,
+  FormControlLabel,
+  Checkbox,
+  Typography,
+  Divider
+} from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { buttonBaseClasses } from '@mui/material';
 import CanvasStatistics from './Components/CanvasStatistics';
 
 function App() {
+  document.body.style.overflow = 'hidden';
   const canvasRef = useRef(null);
   const [isPanning, setIsPanning] = useState(false);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [position, setPosition] = useState({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
   const [scale, setScale] = useState(1);
   const [startPanPosition, setStartPanPosition] = useState({ x: 0, y: 0 });
   
@@ -17,19 +36,165 @@ function App() {
   
   // array to hold instances of generated tables
   const [tables, setTables] = useState([]);
+  
+  // Dialog state
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [newTable, setNewTable] = useState({
+    name: '',
+    notes: '',
+    columns: [],
+    primaryKey: null,
+    foreignKeys: [],
+    position: { x: 100, y: 100 }
+  });
+  
+  // Temp column state for adding columns
+  const [tempColumn, setTempColumn] = useState({
+    name: '',
+    type: '',
+    default: '',
+    nullable: true,
+    unique: false,
+    primaryKey: false,
+    foreignKey: false
+  });
 
   const handleResetCanvasPos = () => {
-    setPosition({ x: 0, y: 0 });
+    setPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
     setScale(1);
   };
 
-  const handleAddTable = () => {
-    const newTableId = `table-${Date.now()}`;
-    // Add position information when creating a new table
-    setTables([...tables, { 
-      id: newTableId,
-      position: { x: 100, y: 100 } // Default position
-    }]);
+  const openNewTableDialog = () => {
+    setNewTable({
+      name: '',
+      notes: '',
+      columns: [],
+      primaryKey: null,
+      foreignKeys: [],
+      position: { x: 100, y: 100 }
+    });
+    setDialogOpen(true);
+  };
+
+  const closeDialog = () => {
+    setDialogOpen(false);
+  };
+
+  const handleTableNameChange = (e) => {
+    setNewTable({...newTable, name: e.target.value});
+  };
+
+  const handleTableNotesChange = (e) => {
+    setNewTable({...newTable, notes: e.target.value});
+  };
+
+  // Column handling
+  const handleColumnNameChange = (e) => {
+    setTempColumn({...tempColumn, name: e.target.value});
+  };
+
+  const handleColumnTypeChange = (e) => {
+    setTempColumn({...tempColumn, type: e.target.value});
+  };
+
+  const handleColumnDefaultChange = (e) => {
+    setTempColumn({...tempColumn, default: e.target.value});
+  };
+
+  const handleColumnNullableChange = (e) => {
+    setTempColumn({...tempColumn, nullable: e.target.checked});
+  };
+
+  const handleColumnUniqueChange = (e) => {
+    setTempColumn({...tempColumn, unique: e.target.checked});
+  };
+
+  const handleColumnPrimaryKeyChange = (e) => {
+    const isPrimaryKey = e.target.checked;
+    
+    setTempColumn({
+      ...tempColumn, 
+      primaryKey: isPrimaryKey,
+      // If setting as primary key, also make it not nullable and unique
+      nullable: isPrimaryKey ? false : tempColumn.nullable,
+      unique: isPrimaryKey ? true : tempColumn.unique
+    });
+  };
+
+  const addColumn = () => {
+    if (tempColumn.name && tempColumn.type) {
+      // If the new column is a primary key, we need to update any existing primary key columns
+      let updatedColumns = [...newTable.columns];
+      
+      if (tempColumn.primaryKey) {
+        // Remove primary key designation from any existing columns
+        updatedColumns = updatedColumns.map(col => ({
+          ...col,
+          primaryKey: false
+        }));
+      }
+      
+      setNewTable({
+        ...newTable,
+        columns: [...updatedColumns, {...tempColumn}],
+        primaryKey: tempColumn.primaryKey ? tempColumn.name : newTable.primaryKey
+      });
+      
+      // Reset temp column
+      setTempColumn({
+        name: '',
+        type: '',
+        default: '',
+        nullable: true,
+        unique: false,
+        primaryKey: false,
+        foreignKey: false
+      });
+    }
+  };
+
+  const removeColumn = (index) => {
+    const updatedColumns = [...newTable.columns];
+    const removedColumn = updatedColumns[index];
+    
+    updatedColumns.splice(index, 1);
+    
+    // If removing primary key column, reset the primary key
+    let updatedPrimaryKey = newTable.primaryKey;
+    if (removedColumn.primaryKey) {
+      updatedPrimaryKey = null;
+    }
+    
+    setNewTable({
+      ...newTable,
+      columns: updatedColumns,
+      primaryKey: updatedPrimaryKey
+    });
+  };
+
+  const handleCreateTable = () => {
+    if (newTable.name) {
+      // If there's data in the temp column fields, add it before creating the table
+      let finalColumns = [...newTable.columns];
+      let finalPrimaryKey = newTable.primaryKey;
+      
+      if (tempColumn.name && tempColumn.type) {
+        finalColumns = [...finalColumns, {...tempColumn}];
+        if (tempColumn.primaryKey) {
+          finalPrimaryKey = tempColumn.name;
+        }
+      }
+      
+      const newTableId = `table-${Date.now()}`;
+      setTables([...tables, { 
+        id: newTableId,
+        ...newTable,
+        columns: finalColumns,
+        primaryKey: finalPrimaryKey,
+        position: {x: 0, y: 0}
+      }]);
+      setDialogOpen(false);     
+    }
   };
 
   // mouse down for panning handler
@@ -214,14 +379,45 @@ function App() {
             }}
             onMouseDown={(e) => handleTableMouseDown(e, table.id)}
           >
-            <div className="table-component-header">Table</div>
+            <div className="table-component-header">{table.name || 'Unnamed Table'}</div>
             <div className="table-placeholder">
-              SQL Table Schema (To be implemented)
+              {table.columns.length > 0 ? (
+                <div className="table-columns">
+                  {table.columns.map((column, index) => (
+                    <div key={index} className="table-column">
+                      <strong>{column.name}</strong> ({column.type})
+                      {column.primaryKey && ' 🔑'}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                'No columns defined'
+              )}
             </div>
+            {table.notes && (
+              <div className="table-notes">
+                <small>{table.notes}</small>
+              </div>
+            )}
           </div>
         ))}
       </div>
-      <AddNewTable onAddTable={handleAddTable}/>
+      
+      {/* MUI Floating Action Button */}
+      <Fab 
+        color="primary" 
+        aria-label="add table" 
+        style={{
+          position: 'fixed',
+          bottom: '20px',
+          right: '20px',
+          zIndex: 1000
+        }}
+        onClick={openNewTableDialog}
+      >
+        <AddIcon />
+      </Fab>
+      
       <CanvasStatistics scale={scale} />
       <button 
         className="resetCanvasButton"
@@ -229,6 +425,140 @@ function App() {
       >
         Reset Position
       </button>
+      
+      {/* Table Creation Dialog */}
+      <Dialog open={dialogOpen} onClose={closeDialog} maxWidth="md" fullWidth>
+        <DialogTitle>Create New Table</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Table Name"
+            fullWidth
+            variant="outlined"
+            value={newTable.name}
+            onChange={handleTableNameChange}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            margin="dense"
+            label="Notes"
+            fullWidth
+            variant="outlined"
+            multiline
+            rows={2}
+            value={newTable.notes}
+            onChange={handleTableNotesChange}
+            sx={{ mb: 3 }}
+          />
+          
+          <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Columns</Typography>
+          <Divider sx={{ mb: 2 }} />
+          
+          {/* Column list */}
+          <List dense sx={{ mb: 2 }}>
+            {newTable.columns.map((column, index) => (
+              <ListItem 
+                key={index}
+                secondaryAction={
+                  <IconButton edge="end" aria-label="delete" onClick={() => removeColumn(index)}>
+                    <DeleteIcon />
+                  </IconButton>
+                }
+              >
+                <ListItemText
+                  primary={`${column.name} (${column.type})`}
+                  secondary={`${column.nullable ? 'Nullable' : 'Not Null'}${column.unique ? ', Unique' : ''}${column.primaryKey ? ', Primary Key' : ''}`}
+                />
+              </ListItem>
+            ))}
+          </List>
+          
+          {/* Add new column */}
+          <Typography variant="subtitle1" sx={{ mt: 2 }}>Add New Column</Typography>
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+            <TextField
+              label="Column Name"
+              value={tempColumn.name}
+              onChange={handleColumnNameChange}
+              size="small"
+              sx={{ flex: 1 }}
+            />
+            <TextField
+              label="Data Type"
+              value={tempColumn.type}
+              onChange={handleColumnTypeChange}
+              size="small"
+              sx={{ flex: 1 }}
+            />
+          </div>
+          
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+            <TextField
+              label="Default Value"
+              value={tempColumn.default}
+              onChange={handleColumnDefaultChange}
+              size="small"
+              sx={{ flex: 1 }}
+            />
+          </div>
+          
+         <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+            <FormControlLabel
+                control={
+                <Checkbox
+                    checked={tempColumn.nullable}
+                    onChange={handleColumnNullableChange}
+                    disabled={tempColumn.primaryKey} // Primary keys can't be nullable
+                />
+                }
+                label="Nullable"
+            />
+            <FormControlLabel
+                control={
+                <Checkbox
+                    checked={tempColumn.unique}
+                    onChange={handleColumnUniqueChange}
+                />
+                }
+                label="Unique"
+            />
+            <FormControlLabel
+                control={
+                <Checkbox
+                    checked={tempColumn.primaryKey}
+                    onChange={handleColumnPrimaryKeyChange}
+                    disabled={newTable.primaryKey && !tempColumn.primaryKey} // Disable if another column is already PK
+                />
+                }
+                label={
+                <span>
+                    Primary Key
+                    {newTable.primaryKey && !tempColumn.primaryKey && (
+                    <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
+                        (Already set to: {newTable.primaryKey})
+                    </Typography>
+                    )}
+                </span>
+                }
+            />
+            </div>
+          <Button 
+            variant="outlined" 
+            onClick={addColumn} 
+            sx={{ mt: 1 }}
+            disabled={!tempColumn.name || !tempColumn.type}
+          >
+            Add Column
+          </Button>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeDialog}>Cancel</Button>
+          <Button onClick={handleCreateTable} color="primary" disabled={!newTable.name}>
+            Create Table
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 }
