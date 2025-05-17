@@ -15,7 +15,11 @@ import {
   FormControlLabel,
   Checkbox,
   Typography,
-  Divider
+  Divider,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -50,15 +54,19 @@ function App() {
   });
   
   // Temp column state for adding columns
-  const [tempColumn, setTempColumn] = useState({
+    const [tempColumn, setTempColumn] = useState({
     name: '',
     type: '',
     default: '',
     nullable: true,
     unique: false,
     primaryKey: false,
-    foreignKey: false
-  });
+    foreignKey: false,
+    references: {
+        tableId: '',
+        columnName: ''
+    }
+    });
 
   const handleResetCanvasPos = () => {
     setPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
@@ -109,6 +117,37 @@ function App() {
   const handleColumnUniqueChange = (e) => {
     setTempColumn({...tempColumn, unique: e.target.checked});
   };
+  const handleColumnForeignKeyChange = (e) => {
+  const isForeignKey = e.target.checked;
+  
+  setTempColumn({
+    ...tempColumn,
+    foreignKey: isForeignKey,
+    // Reset references if turning off foreign key
+    references: isForeignKey ? tempColumn.references : { tableId: '', columnName: '' }
+  });
+};
+
+const handleReferenceTableChange = (e) => {
+  setTempColumn({
+    ...tempColumn,
+    references: {
+      ...tempColumn.references,
+      tableId: e.target.value,
+      columnName: '' // Reset column when table changes
+    }
+  });
+};
+
+const handleReferenceColumnChange = (e) => {
+  setTempColumn({
+    ...tempColumn,
+    references: {
+      ...tempColumn.references,
+      columnName: e.target.value
+    }
+  });
+};
 
   const handleColumnPrimaryKeyChange = (e) => {
     const isPrimaryKey = e.target.checked;
@@ -142,15 +181,19 @@ function App() {
       });
       
       // Reset temp column
-      setTempColumn({
+        setTempColumn({
         name: '',
         type: '',
         default: '',
         nullable: true,
         unique: false,
         primaryKey: false,
-        foreignKey: false
-      });
+        foreignKey: false,
+        references: {
+            tableId: '',
+            columnName: ''
+        }
+        });
     }
   };
 
@@ -305,7 +348,8 @@ function App() {
   }, [scale, position]);
 
   // canvas drawing
-  useEffect(() => {
+  // Replace the existing useEffect for canvas drawing at line 324
+    useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     
@@ -317,7 +361,53 @@ function App() {
     ctx.translate(position.x, position.y);
     ctx.scale(scale, scale);
     
-    // shapes for reference
+    // Draw relationship lines between tables
+    tables.forEach(table => {
+        table.columns.forEach(column => {
+        if (column.foreignKey && column.references?.tableId && column.references?.columnName) {
+            const targetTable = tables.find(t => t.id === column.references.tableId);
+            if (targetTable) {
+            // Source coordinates (from child table with FK)
+            const sourceX = table.position.x + 150; // Approximate middle of table width
+            const sourceY = table.position.y + 30; // Approximate header position
+            
+            // Target coordinates (to parent table with PK/referenced column)
+            const targetX = targetTable.position.x + 150;
+            const targetY = targetTable.position.y + 30;
+            
+            // Draw relationship line
+            ctx.beginPath();
+            ctx.strokeStyle = "#3182CE";
+            ctx.lineWidth = 2 / scale; // Adjust line width for zoom
+            ctx.setLineDash([5 / scale, 5 / scale]); // Dashed line adjusted for zoom
+            ctx.moveTo(sourceX, sourceY);
+            ctx.lineTo(targetX, targetY);
+            ctx.stroke();
+            ctx.setLineDash([]); // Reset to solid line
+            
+            // Draw arrow at the target end
+            const angle = Math.atan2(targetY - sourceY, targetX - sourceX);
+            const arrowSize = 10 / scale;
+            
+            ctx.beginPath();
+            ctx.fillStyle = "#3182CE";
+            ctx.moveTo(
+                targetX - arrowSize * Math.cos(angle) + arrowSize * Math.sin(angle) / 2,
+                targetY - arrowSize * Math.sin(angle) - arrowSize * Math.cos(angle) / 2
+            );
+            ctx.lineTo(targetX, targetY);
+            ctx.lineTo(
+                targetX - arrowSize * Math.cos(angle) - arrowSize * Math.sin(angle) / 2,
+                targetY - arrowSize * Math.sin(angle) + arrowSize * Math.cos(angle) / 2
+            );
+            ctx.closePath();
+            ctx.fill();
+            }
+        }
+        });
+    });
+    
+    // Your existing shapes
     // blue square
     ctx.fillStyle = 'blue';
     ctx.fillRect(100, 100, 50, 50);
@@ -339,7 +429,7 @@ function App() {
     
     ctx.restore();
     
-  }, [position, scale]);
+    }, [position, scale, tables]);
 
   return (
     <div className="App">
@@ -388,6 +478,7 @@ function App() {
                     <div key={index} className="table-column">
                       <strong>{column.name}</strong> ({column.type})
                       {column.primaryKey && ' 🔑'}
+                      {column.foreignKey && column.references?.tableID && ' 🔗'}
                     </div>
                   ))}
                 </div>
@@ -467,6 +558,10 @@ function App() {
                   </IconButton>
                 }
               >
+                <ListItemText
+                primary={`${column.name} (${column.type})`}
+                secondary={`${column.nullable ? 'Nullable' : 'Not Null'}${column.unique ? ', Unique' : ''}${column.primaryKey ? ', Primary Key' : ''}${column.foreignKey && column.references?.tableId ? `, FK → ${tables.find(t => t.id === column.references.tableId)?.name || ''}` : ''}`}
+                />
                 <ListItemText
                   primary={`${column.name} (${column.type})`}
                   secondary={`${column.nullable ? 'Nullable' : 'Not Null'}${column.unique ? ', Unique' : ''}${column.primaryKey ? ', Primary Key' : ''}`}
@@ -555,6 +650,52 @@ function App() {
                 </span>
                 }
             />
+            <FormControlLabel
+                control={
+                    <Checkbox
+                    checked={tempColumn.foreignKey}
+                    onChange={handleColumnForeignKeyChange}
+                    />
+                }
+                label="Foreign Key"
+                />
+
+                {tempColumn.foreignKey && (
+                <div style={{ display: 'flex', gap: '10px', marginTop: '10px', marginBottom: '10px', width: '100%' }}>
+                    <FormControl size="small" sx={{ flex: 1 }}>
+                    <InputLabel>References Table</InputLabel>
+                    <Select
+                        value={tempColumn.references.tableId}
+                        label="References Table"
+                        onChange={handleReferenceTableChange}
+                    >
+                        {tables.map(table => (
+                        <MenuItem key={table.id} value={table.id}>{table.name}</MenuItem>
+                        ))}
+                    </Select>
+                    </FormControl>
+                    
+                    {tempColumn.references.tableId && (
+                    <FormControl size="small" sx={{ flex: 1 }}>
+                        <InputLabel>References Column</InputLabel>
+                        <Select
+                        value={tempColumn.references.columnName}
+                        label="References Column"
+                        onChange={handleReferenceColumnChange}
+                        >
+                        {tables
+                            .find(t => t.id === tempColumn.references.tableId)?.columns
+                            .map(column => (
+                            <MenuItem key={column.name} value={column.name}>
+                                {column.name} {column.primaryKey ? '(PK)' : ''}
+                            </MenuItem>
+                            ))
+                        }
+                        </Select>
+                    </FormControl>
+                    )}
+                </div>
+                )}
             </div>
           <Button 
             variant="outlined" 
