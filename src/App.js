@@ -292,7 +292,7 @@ function App() {
             variant="outlined"
             fullWidth
             multiline
-            minRows={4}
+            minRows={24}
             maxRows={24}
             value={yourTextState}
             onChange={(e) => setYourTextState(e.target.value)}
@@ -1286,7 +1286,7 @@ function App() {
           <TextField
             multiline
             fullWidth
-            minRows={1}
+            minRows={20}
             maxRows={20}
             value={sqlCode}
             variant="outlined"
