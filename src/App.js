@@ -52,6 +52,7 @@ function App() {
   document.body.style.overflow = "hidden";
   const STATS_FADE_OUT_TIME = 2000; // 2 seconds
   const canvasRef = useRef(null);
+  const [showLogo, setShowLogo] = useState(true);
   const [isPanning, setIsPanning] = useState(false);
   const [position, setPosition] = useState({
     x: window.innerWidth / 2,
@@ -135,6 +136,43 @@ function App() {
     setTempTableId(tableId);
     setTableDialogOpen(true);
   };
+  // Add this near your other state declarations
+  const sampleSQL = `CREATE TABLE customers (
+    id INT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE,
+    created_at TIMESTAMP
+  );
+
+  CREATE TABLE orders (
+    id INT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    order_date TIMESTAMP NOT NULL,
+    total_amount DECIMAL(10,2),
+    FOREIGN KEY (customer_id) REFERENCES customers(id)
+  );
+
+  CREATE TABLE products (
+    id INT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    price DECIMAL(10,2) NOT NULL,
+    inventory_count INT NOT NULL
+  );
+
+  CREATE TABLE order_items (
+    id INT PRIMARY KEY,
+    order_id INT NOT NULL,
+    product_id INT NOT NULL,
+    quantity INT NOT NULL,
+    unit_price DECIMAL(10,2) NOT NULL,
+    FOREIGN KEY (order_id) REFERENCES orders(id),
+    FOREIGN KEY (product_id) REFERENCES products(id)
+  );`;
+
+  const handleImportTemplate = () => {
+    setYourTextState(sampleSQL);
+  }
 
   const handleResetCanvasPos = () => {
     setPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
@@ -166,6 +204,11 @@ function App() {
     setTempColumns(tempTable.columns.map((col) => ({ ...col })));
   }, [tableDialogOpen, tempTable.columns]);
 
+  // Shows logo when no tables are present
+  useEffect(() => {
+    setShowLogo(tables.length === 0);
+  }, [tables.length]);
+  
   const addColumn = () => {
     const emptyCol = {
       name: "",
@@ -207,6 +250,7 @@ function App() {
     } else {
       // Creating new table
       handleCreateTable(updatedTable);
+      setShowLogo(false);
     }
     setTableDialogOpen(false);
     resetFormFields();
@@ -286,6 +330,13 @@ function App() {
         fullWidth
       >
         <DialogTitle>Import SQL</DialogTitle>
+        <Button 
+            variant="text"
+            onClick={handleImportTemplate}
+            sx={{ width: "200px", position: "absolute", right: "23px", top: "15px"}}
+          >
+            Import Template
+          </Button>
         <DialogContent>
           <TextField
             label="Import SQL"
@@ -345,6 +396,7 @@ function App() {
           position: { x: 0, y: 0 },
         },
       ]);
+      setShowLogo(false);
       setTableDialogOpen(false);
       resetFormFields();
     }
@@ -1028,6 +1080,9 @@ function App() {
         width={window.innerWidth}
         height={window.innerHeight}
       />
+      <div style={{ display: (showLogo) ? "block" : "none", position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", zIndex: 1000 }}>
+        <img src="logo.png" alt="SeeQL" style={{ width: "250px", height: "auto"}} />
+      </div>
       <div
         className="tables-area"
         style={{
@@ -1160,6 +1215,7 @@ function App() {
               setTables((prevTables) =>
                 prevTables.filter((table) => table.id !== draggedTable)
               );
+              if (tables)
               setDraggedTable(null);
               setIsOverTrash(false);
             }
