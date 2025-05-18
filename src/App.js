@@ -101,11 +101,13 @@ function App() {
       return;
     }
 
+    const SQLCODE = generateSQL();
+
     const response = await ai.models.generateContent({
       model: "gemini-2.0-flash",
       contents:
-        "Fix the SQL code below by using bcnf normalizing form. The output should only be pure code with no comments. SQL CODE:" +
-        sqlCode,
+        "Fix the SQL code below by using normalizing form IF APPLICABLE. The output should only be pure code with no comments. SQL CODE:" +
+        SQLCODE,
     });
 
     const text = response.text;
