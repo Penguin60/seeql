@@ -34,6 +34,18 @@ import Menu from "@mui/joy/Menu";
 import MenuButton from "@mui/joy/MenuButton";
 import Dropdown from "@mui/joy/Dropdown";
 import { render } from "@testing-library/react";
+import { initializeApp } from "firebase/app";
+
+const firebaseConfig = {
+  apiKey: process.env.REACT_APP_API_KEY,
+  authDomain: process.env.REACT_APP_AUTH_DOMAIN,
+  projectId: process.env.REACT_APP_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_APP_ID,
+  measurementId: process.env.REACT_APP_MEASUREMENT_ID,
+};
+const app = initializeApp(firebaseConfig);
 
 function App() {
   document.body.style.overflow = "hidden";
@@ -996,6 +1008,10 @@ function App() {
       return () => clearInterval(interval);
     }
   }, [lastZoomTime, statsTick]);
+
+  useEffect(() => {
+    document.body.style.opacity = "1";
+  }, []);
 
   return (
     <div className="App">
