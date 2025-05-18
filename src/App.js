@@ -118,7 +118,7 @@ function App() {
   async function renderSQL(PromptCode) {
     const newTables = generateTablesFromSQL(PromptCode);
     console.log(newTables);
-    setTables(newTables);
+    setTables([...tables, ...newTables]);
   }
 
   const [copyStatus, setCopyStatus] = useState(0);
@@ -292,9 +292,11 @@ function App() {
             variant="outlined"
             fullWidth
             multiline
-            minRows={6}
+            minRows={4}
+            maxRows={24}
             value={yourTextState}
             onChange={(e) => setYourTextState(e.target.value)}
+            sx={{ mt: 1, height: "72vh", mb: 0 }} // Add top margin to prevent cutting into the dialog
           />
         </DialogContent>
         <DialogActions>
@@ -329,7 +331,7 @@ function App() {
 
   const handleTextSubmit = () => {
     const tablesFromSQL = generateTablesFromSQL(yourTextState);
-    setTables(tablesFromSQL);
+    setTables([...tables, ...tablesFromSQL]);
   };
 
   const handleCreateTable = (newTable) => {
@@ -1176,10 +1178,10 @@ function App() {
           style={{
             zIndex: 1001,
             width: "64px",
-            height: "64px",
             margin: "0 -8px",
             background: "black",
             color: "white",
+            borderRadius: "10px",
           }}
           onClick={openNewTableDialog}
         >
@@ -1223,18 +1225,47 @@ function App() {
         onClose={closeSQLDialog}
         maxWidth="md"
         fullWidth
+        PaperProps={{
+          sx: {
+            maxWidth: "60%",
+            maxHeight: "90vh",
+            display: "flex",
+            flexDirection: "column",
+            mb: 0,
+          },
+        }}
       >
         <DialogTitle>Exported Database Schema</DialogTitle>
-        <DialogContent sx={{ pt: 2, pb: 0 }}>
-          <FormControl fullWidth sx={{ mt: 1, mb: 2 }}>
-            <InputLabel id="formatSelectorLabel" sx={{}}>
-              Format
-            </InputLabel>
+        <DialogContent sx={{ pt: 2, pb: 0, overflow: "visible" }}>
+          <FormControl fullWidth sx={{ mt: 1, mb: 0 }}>
+            <InputLabel id="formatSelectorLabel">Format</InputLabel>
             <Select
               labelId="formatSelectorLabel"
               value={sqlCodeType}
               label="Format"
               onChange={handleFormatChange}
+              MenuProps={{
+                PaperProps: {
+                  sx: {
+                    my: 0,
+                    boxShadow: 3,
+                    borderRadius: 2,
+                    maxHeight: 300,
+                    overflowY: "auto",
+                  },
+                },
+                MenuListProps: {
+                  sx: {
+                    p: 0,
+                    m: 0,
+                    overflow: "auto",
+                  },
+                },
+              }}
+              sx={{
+                background: "white",
+                my: 0,
+              }}
             >
               <MenuItem value="SQL">SQL</MenuItem>
               <MenuItem value="Drizzle">Drizzle ORM</MenuItem>
@@ -1243,16 +1274,36 @@ function App() {
             </Select>
           </FormControl>
         </DialogContent>
-        <DialogContent>
+        <DialogContent
+          sx={{
+            flex: 1,
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            minHeight: 0,
+          }}
+        >
           <TextField
             multiline
             fullWidth
-            minRows={10}
-            maxRows={30}
+            minRows={1}
+            maxRows={20}
             value={sqlCode}
             variant="outlined"
-            InputProps={{ readOnly: true }}
-            sx={{ fontFamily: "monospace", fontSize: "1rem" }}
+            InputProps={{
+              readOnly: true,
+              sx: {
+                maxHeight: "80vh",
+                fontFamily: "monospace",
+                fontSize: "0.9rem",
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                boxSizing: "border-box",
+                display: "block",
+                overflow: "auto",
+                resize: "none",
+              },
+            }}
           />
           <IconButton
             variant="contained"
@@ -1264,7 +1315,7 @@ function App() {
               width: "40px",
               height: "40px",
               right: "29px",
-              bottom: "105px",
+              bottom: "80px",
               "&:hover": {
                 backgroundColor: "gray",
                 color: "black",
