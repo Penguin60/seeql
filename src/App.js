@@ -21,7 +21,7 @@ import AddIcon from "@mui/icons-material/Add";
 import { MyLocation } from "@mui/icons-material";
 import TrashIcon from "@mui/icons-material/Delete";
 import MenuIcon from "@mui/icons-material/Menu";
-import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
 import CanvasStatistics from "./Components/CanvasStatistics";
 import { Add } from "@mui/icons-material";
 import TableDialog from "./Components/TableDialog";
@@ -33,7 +33,6 @@ import {
 import Menu from "@mui/joy/Menu";
 import MenuButton from "@mui/joy/MenuButton";
 import Dropdown from "@mui/joy/Dropdown";
-import { render } from "@testing-library/react";
 import { initializeApp } from "firebase/app";
 
 const firebaseConfig = {
@@ -46,6 +45,8 @@ const firebaseConfig = {
   measurementId: process.env.REACT_APP_MEASUREMENT_ID,
 };
 const app = initializeApp(firebaseConfig);
+
+const ai = new GoogleGenAI({ apiKey: process.env.REACT_APP_API_KEY });
 
 function App() {
   document.body.style.overflow = "hidden";
@@ -69,8 +70,8 @@ function App() {
 
   const [editingTableId, setEditingTableId] = useState(null);
 
-  const handleTableMouseMove = () => { };
-  const handleTableMouseUp = () => { };
+  const handleTableMouseMove = () => {};
+  const handleTableMouseUp = () => {};
 
   const [isOverTrash, setIsOverTrash] = useState(false);
 
@@ -94,18 +95,17 @@ function App() {
   const [sqlCode, setSqlCode] = useState("");
   const [sqlCodeType, setSqlCodeType] = useState("SQL");
 
-  const ai = new GoogleGenAI({ apiKey: process.env.REACT_APP_API_KEY});
-
   async function callGeminiAPI() {
-
-    if(tables.length === 0) {
+    if (tables.length === 0) {
       alert("Create at least one table before normalizing");
       return;
     }
 
     const response = await ai.models.generateContent({
       model: "gemini-2.0-flash",
-      contents: "Fix the SQL code below by using bcnf normalizing form. The output should only be pure code with no comments. SQL CODE:" + sqlCode
+      contents:
+        "Fix the SQL code below by using bcnf normalizing form. The output should only be pure code with no comments. SQL CODE:" +
+        sqlCode,
     });
 
     const text = response.text;
@@ -259,12 +259,12 @@ function App() {
       updatedTables = updatedTables.map((table) =>
         table.id === tempTableId
           ? {
-            ...table,
-            name: updatedTable.name,
-            notes: updatedTable.notes,
-            columns: updatedTable.columns,
-            primaryKey: updatedTable.primaryKey,
-          }
+              ...table,
+              name: updatedTable.name,
+              notes: updatedTable.notes,
+              columns: updatedTable.columns,
+              primaryKey: updatedTable.primaryKey,
+            }
           : table
       );
       setTables(updatedTables);
@@ -662,8 +662,7 @@ function App() {
         name: tableName,
         notes: "",
         columns,
-        primaryKey:
-          columns.find((c) => c.primaryKey)?.name || null,
+        primaryKey: columns.find((c) => c.primaryKey)?.name || null,
         foreignKeys,
         position: { x: 100, y: 100 },
       });
@@ -1075,8 +1074,9 @@ function App() {
                   table.columns.map((column, index) => (
                     <tr key={index} className="table-column">
                       <td
-                        className={`col-name ${column.primaryKey ? "primary-key" : ""
-                          }`}
+                        className={`col-name ${
+                          column.primaryKey ? "primary-key" : ""
+                        }`}
                       >
                         {column.name} {column.primaryKey && "🔑"}
                       </td>
@@ -1357,35 +1357,20 @@ function App() {
           <MenuItem onClick={() => setImportDialogOpen(true)}>
             Import SQL
           </MenuItem>
+          <MenuItem onClick={callGeminiAPI}>Normalize</MenuItem>
         </Menu>
       </Dropdown>
-          <div
-          style={{
-            position: "fixed",
-            bottom: "1.78%",
-            left: "1%",
-            zIndex: 1000,
-          }}
-        ></div>
-          <Fab
-          color="primary"
-          aria-label="normalize"
-          style={{
-            zIndex: 1001,
-            width: "64px",
-            height: "64px",
-            margin: "0 -8px",
-            background: "black",
-            color: "white",
-          }}
-          onClick={() => callGeminiAPI}
-        >
-          <AutoFixHighIcon style={{ fontSize: "32px" }} />
-        </Fab>
+      <div
+        style={{
+          position: "fixed",
+          bottom: "1.78%",
+          left: "1%",
+          zIndex: 1000,
+        }}
+      ></div>
       {importSQLDialog()}
     </div>
   );
 }
-
 
 export default App;
