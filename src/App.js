@@ -94,7 +94,7 @@ function App() {
   const [sqlCode, setSqlCode] = useState("");
   const [sqlCodeType, setSqlCodeType] = useState("SQL");
 
-  const ai = new GoogleGenAI({ apiKey: "AIzaSyBolZe3UbhmSvnjmEPKjEzArrupXeAyVCc" });
+  const ai = new GoogleGenAI({ apiKey: process.env.REACT_APP_API_KEY});
 
   async function callGeminiAPI() {
 
@@ -1367,7 +1367,6 @@ function App() {
             zIndex: 1000,
           }}
         ></div>
-
           <Fab
           color="primary"
           aria-label="normalize"
