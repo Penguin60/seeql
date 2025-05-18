@@ -333,9 +333,9 @@ function App() {
         <Button 
             variant="text"
             onClick={handleImportTemplate}
-            sx={{ width: "200px", position: "absolute", right: "23px", top: "15px"}}
+            sx={{ width: "120px", position: "absolute", right: "23px", top: "15px", color: "black", textTransform: "none", fontWeight: 500 }}
           >
-            Import Template
+            Use template
           </Button>
         <DialogContent>
           <TextField
